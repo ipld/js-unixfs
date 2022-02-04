@@ -1,0 +1,49 @@
+{
+  "name": "@ipld/unixfs",
+  "description": "An implementation of the UnixFS in JavaScript designed for use with multiformats",
+  "version": "0.0.0",
+  "files": [
+    "src",
+    "dist/src",
+    "dist/bundle*"
+  ],
+  "scripts": {
+    "prepare:proto": "pbjs -t static-module -w es6 -r unixfs --force-number --no-verify --no-delimited --no-create --no-beautify --no-defaults --lint eslint-disable -o src/unixfs.proto.js ./src/unixfs.proto",
+    "prepare:proto-types": "pbts -o src/unixfs.proto.d.ts src/unixfs.proto.js",
+    "test:web": "playwright-test test/*.spec.js --cov && nyc report",
+    "test:node": "c8 --check-coverage --branches 100 --functions 100 --lines 100 mocha test/*.spec.js",
+    "t": "mocha test/*.spec.js",
+    "coverage": "c8 --reporter=html mocha test/test-*.js && npm_config_yes=true npx st -d coverage -p 8080"
+  },
+  "dependencies": {
+    "@ipld/dag-pb": "^2.1.15",
+    "protobufjs": "^6.11.2"
+  },
+  "type": "module",
+  "main": "src/lib.js",
+  "types": "dist/src/lib.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/lib.js",
+      "types": "./dist/src/lib.d.ts"
+    }
+  },
+  "c8": {
+    "exclude": [
+      "src/unixfs.proto.js",
+      "test/**",
+      "dist/**"
+    ]
+  },
+  "devDependencies": {
+    "multiformats": "^9.6.2",
+    "typescript": "^4.5.5",
+    "@types/mocha": "^9.1.0",
+    "@types/chai": "^4.3.0",
+    "mocha": "^9.2.0",
+    "chai": "^4.3.6",
+    "nyc": "^15.1.0",
+    "playwright-test": "^7.2.2",
+    "c8": "^7.11.0"
+  }
+}
