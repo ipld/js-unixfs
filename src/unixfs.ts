@@ -1,8 +1,16 @@
 import type { MultihashDigest } from "multiformats/hashes/interface"
-import { Data, Metadata, type IData } from "./unixfs.proto"
+import { Data, type IData } from "../gen/unixfs.js"
+
+export type { BlockEncoder } from "multiformats/codecs/interface"
+export type {
+  MultihashHasher,
+  MultihashDigest,
+} from "multiformats/hashes/interface"
+export * as Layout from "./file/layout/api"
 
 import NodeType = Data.DataType
 
+export * from "./lib.js"
 export { NodeType }
 export type { IData }
 
@@ -10,11 +18,13 @@ export type { IData }
  * Type representing any UnixFS node.
  */
 export type Node =
-  | File
-  | FileShard
-  | Chunk
+  | Raw
+  | SimpleFile
+  | AdvancedFile
+  | ComplexFile
   | Directory
   | DirectoryShard
+  | ShardedDirectory
   | Symlink
 
 export type File = SimpleFile | AdvancedFile | ComplexFile
@@ -24,9 +34,15 @@ export type File = SimpleFile | AdvancedFile | ComplexFile
  * semantically different from a `FileChunk` and your interpretation SHOULD vary
  * depending on where you encounter the node (In root of the DAG or not).
  */
-export interface SimpleFile extends FileChunk, NodeMetadata {}
+export interface SimpleFile {
+  readonly metadata?: Metadata
 
-export interface NodeMetadata {
+  readonly type: NodeType.File
+  readonly layout: "simple"
+  readonly content: Uint8Array
+}
+
+export interface Metadata {
   readonly mode?: Mode
   readonly mtime?: MTime
 }
@@ -38,7 +54,13 @@ export interface NodeMetadata {
  * or not).
  */
 
-export interface AdvancedFile extends FileShard, NodeMetadata {}
+export interface AdvancedFile {
+  readonly metadata?: Metadata
+
+  readonly type: NodeType.File
+  readonly layout: "advanced"
+  readonly parts: ReadonlyArray<FileLink>
+}
 
 export type Chunk = Raw | FileChunk
 
@@ -97,7 +119,10 @@ export interface Raw {
  */
 export interface FileChunk {
   readonly type: NodeType.File
+  readonly layout: "simple"
   readonly content: Uint8Array
+
+  readonly metadata?: Metadata
 }
 
 /**
@@ -119,10 +144,21 @@ export interface FileChunk {
  */
 export interface FileShard {
   readonly type: NodeType.File
+  readonly layout: "advanced"
   readonly parts: ReadonlyArray<FileLink>
 }
 
-export type FileLink = DAGLink<Uint8Array> | DAGLink<Chunk> | DAGLink<FileShard>
+export type FileLink =
+  | ContentDAGLink<Uint8Array>
+  | ContentDAGLink<Chunk>
+  | ContentDAGLink<FileShard>
+
+export interface ContentDAGLink<T> extends DAGLink<T> {
+  /**
+   * Total number of bytes in the file
+   */
+  readonly contentByteLength: number
+}
 
 /**
  * Represents a link to the DAG with
@@ -138,10 +174,6 @@ export interface DAGLink<T = unknown> extends Phantom<T> {
    * the block and all the blocks it links to.
    */
   readonly dagByteLength: number
-  /**
-   * Total number of bytes in the file
-   */
-  readonly contentByteLength: number
 }
 /**
  * These type of nodes are not produces by referenece IPFS implementations, yet
@@ -156,14 +188,14 @@ export interface DAGLink<T = unknown> extends Phantom<T> {
  *
  * @deprecated
  */
-export interface ComplexFile extends NodeMetadata {
+export interface ComplexFile {
   readonly type: NodeType.File
-  /**
-   *
-   */
+  readonly layout: "complex"
   readonly content: Uint8Array
 
   readonly parts: ReadonlyArray<FileLink>
+
+  readonly metadata?: Metadata
 }
 
 /**
@@ -171,11 +203,13 @@ export interface ComplexFile extends NodeMetadata {
  * kind of file which is then refined to one of
  * the other definitions.
  */
-export interface UnknownFile extends NodeMetadata {
+export interface UnknownFile {
   readonly type: NodeType.File
 
   readonly content?: Uint8Array
   readonly parts?: ReadonlyArray<FileLink>
+
+  readonly metadata?: Metadata
 }
 
 /**
@@ -186,9 +220,11 @@ export type Directory = FlatDirectory | ShardedDirectory
 /**
  * Logacal representation of a directory that fits single block.
  */
-export interface FlatDirectory extends NodeMetadata {
+export interface FlatDirectory {
   readonly type: NodeType.Directory
   readonly entries: ReadonlyArray<DirectoryLink>
+
+  readonly metadata: Metadata
 }
 
 export type DirectoryLink = NamedDAGLink<File> | NamedDAGLink<Directory>
@@ -204,7 +240,9 @@ export interface NamedDAGLink<T> extends DAGLink<T> {
  *
  * @see https://en.wikipedia.org/wiki/Hash_array_mapped_trie
  */
-export interface ShardedDirectory extends DirectoryShard, NodeMetadata {}
+export interface ShardedDirectory extends DirectoryShard {
+  readonly metadata: Metadata
+}
 
 /**
  * Logical represenatation of the shard of the sharded directory. Please note
@@ -230,6 +268,8 @@ export interface DirectoryShard {
   readonly hashType: uint64
 
   readonly entries: ReadonlyArray<ShardedDirectoryLink>
+
+  readonly metadata?: Metadata
 }
 
 export type ShardedDirectoryLink =
@@ -241,12 +281,14 @@ export type ShardedDirectoryLink =
  *
  * [symbolic link]:https://en.wikipedia.org/wiki/Symbolic_link
  */
-export interface Symlink extends NodeMetadata {
+export interface Symlink {
   readonly type: NodeType.Symlink
   /**
    * UTF-8 encoded path to the symlink target.
    */
   readonly content: ByteView<string>
+
+  readonly metadata: Metadata
 }
 
 /**
@@ -320,6 +362,12 @@ export interface CID<
   readonly code: C
   readonly multihash: MultihashDigest<A>
   readonly bytes: Uint8Array
+}
+
+// @see https://github.com/ipld/js-car/blob/a53d5c77d30f998b45a534e20d0f174574c58cd5/api.ts#L5
+export interface Block {
+  cid: CID
+  bytes: Uint8Array
 }
 
 /**

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* eslint-env mocha */
 import * as PB from "@ipld/dag-pb"
 // import { UnixFS } from "ipfs-unixfs"
@@ -16,29 +17,22 @@ const MURMUR = 0x22
  * @param {string} text
  */
 const utf8Encode = text => utf8.encode(text)
+
 describe("unixfs-format", () => {
   it("encodes simple file", () => {
     const block = unixfs.encode({
+      layout: "simple",
       type: unixfs.NodeType.File,
       content: utf8.encode("batata"),
     })
 
-    // const expected = new Uint8Array(
-    //   new UnixFS({
-    //     type: "file",
-    //     data: utf8Encode("batata"),
-    //   }).marshal()
-    // )
-
-    // expect(block.slice(2)).to.be.deep.equal(expected)
-
     const node = unixfs.decode(block)
-    expect(node).to.be.deep.equal({
-      kind: "simple",
-      type: unixfs.NodeType.File,
-      content: utf8Encode("batata"),
-      filesize: 6,
-    })
+    if (node.type != unixfs.NodeType.File) assert.fail("expected file type")
+
+    if (node.layout !== "simple") assert.fail("expected simple layout")
+
+    assert.equal(unixfs.filesize(node), 6)
+    assert.deepEqual(node.content, utf8.encode("batata"))
   })
 
   it("raw", () => {
@@ -48,42 +42,24 @@ describe("unixfs-format", () => {
     })
 
     const node = unixfs.decode(block)
-    expect(node).to.be.deep.equal({
-      type: unixfs.NodeType.Raw,
-      content: utf8Encode("bananas"),
-      filesize: 7,
-    })
 
-    // const expected = new Uint8Array(
-    //   new UnixFS({
-    //     type: "raw",
-    //     data: utf8Encode("bananas"),
-    //   }).marshal()
-    // )
-
-    // expect(block.slice(2)).to.be.deep.equal(expected)
+    if (node.type != unixfs.NodeType.Raw) assert.fail("expected raw")
+    assert.deepEqual(node.content, utf8Encode("bananas"))
+    assert.equal(unixfs.filesize(node), 7)
   })
 
   it("directory", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.Directory,
       entries: [],
+      metadata: {},
     })
 
     const node = unixfs.decode(block)
-
-    expect(node).to.be.deep.equal({
-      type: unixfs.NodeType.Directory,
-      entries: [],
-    })
-
-    // const expected = new Uint8Array(
-    //   new UnixFS({
-    //     type: "directory",
-    //   }).marshal()
-    // )
-
-    // expect(block.slice(2)).to.be.deep.equal(expected)
+    if (node.type != unixfs.NodeType.Directory) assert.fail("expected dir")
+    assert.deepEqual(node.entries, [])
+    // @ts-expect-error - filesize does not take dir
+    assert.equal(unixfs.filesize(node), 0)
   })
 
   it("hamt-sharded-directory", () => {
@@ -97,23 +73,31 @@ describe("unixfs-format", () => {
 
     const node = unixfs.decode(block)
 
-    expect(node).to.be.deep.equal({
-      type: unixfs.NodeType.HAMTShard,
-      fanout: 8,
-      hashType: MURMUR,
-      entries: [],
-    })
+    if (node.type != unixfs.NodeType.HAMTShard) assert.fail("expected HAMT")
+    assert.equal(node.fanout, 8)
+    assert.equal(node.hashType, MURMUR)
+    assert.deepEqual(node.entries, [])
+    assert.deepEqual(node.bitfield, new Uint8Array())
+    // @ts-expect-error - filesize does not take dir
+    assert.equal(unixfs.filesize(node), 0)
   })
 
   it("mode", () => {
     const mode = parseInt("0555", 8)
     const block = unixfs.encode({
       type: unixfs.NodeType.File,
-      mode,
+      layout: "simple",
+      metadata: { mode },
       content: utf8Encode("mode"),
     })
 
-    expect(unixfs.decode(block)).to.deep.equal({
+    const node = unixfs.decode(block)
+    if (node.type !== unixfs.NodeType.File) assert.fail("expect file")
+    node
+    if (node.layout !== "simple") assert.fail("expect simple")
+    assert.deepEqual(node.metadata, { mode })
+
+    expect().to.deep.equal({
       type: unixfs.NodeType.File,
       kind: "simple",
       mode,

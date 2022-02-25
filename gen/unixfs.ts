@@ -28,7 +28,7 @@ export interface IData {
 }
 
 /** Represents a Data. */
-export class Data implements IData {
+export declare class Data implements IData {
 
     /**
      * Constructs a new Data.
@@ -103,7 +103,7 @@ export class Data implements IData {
 export namespace Data {
 
     /** DataType enum. */
-    enum DataType {
+ export enum DataType {
         Raw = 0,
         Directory = 1,
         File = 2,
@@ -124,7 +124,7 @@ export interface IUnixTime {
 }
 
 /** Represents an UnixTime. */
-export class UnixTime implements IUnixTime {
+export declare class UnixTime implements IUnixTime {
 
     /**
      * Constructs a new UnixTime.
@@ -186,7 +186,7 @@ export interface IMetadata {
 }
 
 /** Represents a Metadata. */
-export class Metadata implements IMetadata {
+export declare class Metadata implements IMetadata {
 
     /**
      * Constructs a new Metadata.
