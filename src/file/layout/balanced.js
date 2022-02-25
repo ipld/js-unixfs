@@ -154,7 +154,7 @@ export const write = (state, slices) => {
   if (leafIndex.length >= state.width) {
     return flush({ ...state, leafIndex, lastID }, leaves)
   } else {
-    return { layout: { ...state, lastID }, leaves, nodes: EMPTY }
+    return { layout: { ...state, leafIndex, lastID }, leaves, nodes: EMPTY }
   }
 }
 

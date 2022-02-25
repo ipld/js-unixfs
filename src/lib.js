@@ -233,6 +233,7 @@ export const encodeAdvancedFile = (parts, metadata = BLANK) =>
  * @returns {PB.PBLink}
  */
 export const encodeLink = dag => ({
+  Name: "",
   Tsize: dag.dagByteLength,
   // @ts-ignore - @see https://github.com/multiformats/js-multiformats/pull/161
   Hash: dag.cid,
