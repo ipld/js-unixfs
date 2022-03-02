@@ -1,5 +1,6 @@
 import { File } from "@web-std/file"
 import { CID } from "multiformats"
+import { fetch } from "@web-std/fetch"
 
 const utf8Encoder = new TextEncoder()
 
@@ -8,4 +9,4 @@ const utf8Encoder = new TextEncoder()
  */
 export const encodeUTF8 = input => utf8Encoder.encode(input)
 
-export { File, CID }
+export { File, CID, fetch }
