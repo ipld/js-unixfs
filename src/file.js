@@ -9,6 +9,8 @@ import { sha256 } from "multiformats/hashes/sha2"
 import { CID } from "multiformats/cid"
 import * as Balanced from "./file/layout/balanced.js"
 
+export * from "./file/api.js"
+
 /**
  * @returns {API.FileWriterConfig}
  */

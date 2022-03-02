@@ -174,7 +174,7 @@ export const flush = (state, leaves = EMPTY, nodes = [], close = false) => {
   // Move leaves into nodes
   while (leafIndex.length >= width || (leafIndex.length > 0 && close)) {
     grow(nodeIndex, 1)
-    const node = new Node(lastID++, leafIndex.splice(0, width))
+    const node = new Node(++lastID, leafIndex.splice(0, width))
     nodeIndex[0].push(node.id)
     nodes.push(node)
   }
@@ -188,7 +188,7 @@ export const flush = (state, leaves = EMPTY, nodes = [], close = false) => {
       row.length >= width ||
       (row.length > 0 && close && depth < nodeIndex.length)
     ) {
-      const node = new Node(lastID++, row.splice(0, width))
+      const node = new Node(++lastID, row.splice(0, width))
       grow(nodeIndex, depth + 1)
       nodeIndex[depth].push(node.id)
       nodes.push(node)
@@ -218,7 +218,7 @@ export const close = (state, metadata) => {
     nodes.length = nodes.length - 1
     return { root, nodes }
   } else {
-    const root = new Node(layout.lastID, top, metadata)
+    const root = new Node(layout.lastID + 1, top, metadata)
     return { root, nodes }
   }
 }

@@ -1,10 +1,18 @@
 /* eslint-env mocha */
 
-import * as fs from "fs"
-import * as unixfs from "../src/lib.js"
-import * as FileImporter from "../src/file.js"
 import { expect, assert } from "chai"
 import { encodeUTF8, File, CID } from "./util.js"
+import * as unixfs from "../src/lib.js"
+import * as FileImporter from "../src/file.js"
+import * as Trickle from "../src/file/layout/trickle.js"
+import * as Balanced from "../src/file/layout/balanced.js"
+import * as FixedSize from "../src/file/chunker/fixed.js"
+import * as Rabin from "../src/file/chunker/rabin.js"
+import * as API from "../src/file/api.js"
+import * as RawLeaf from "multiformats/codecs/raw"
+import * as UnixFS from "../src/unixfs.js"
+import { sha256 } from "multiformats/hashes/sha2"
+import * as FS from "fs"
 
 const CHUNK_SIZE = 262144
 describe("test file importer", () => {
@@ -83,5 +91,39 @@ describe("test file importer", () => {
       r3.value.cid,
       CID.parse("bafybeihznihf5g5ibdyoawn7uu3inlyqrxjv63lt6lop6h3w6rzwrp67a4")
     )
+  })
+
+  it.only("--chunker=size-65535 --trickle=false --raw-leaves=false --cid-version=1", async () => {
+    const { writer, blocks } = FileImporter.createImporter(
+      {},
+      {
+        chunker: FixedSize.withMaxChunkSize(65535),
+        fileChunkEncoder: FileImporter.UnixFSLeaf,
+        smallFileEncoder: FileImporter.UnixFSLeaf,
+        fileLayout: Balanced,
+        createCID: CID.createV1,
+        hasher: sha256,
+        fileEncoder: UnixFS,
+      }
+    )
+
+    const size = Math.round(65535 * 2.2)
+    const FRAME = Math.round(size / 10)
+    let offset = 0
+    let n = 0
+    while (offset < size) {
+      const slice = new Uint8Array(Math.min(FRAME, size - offset)).fill(++n)
+      writer.write(slice)
+      offset += FRAME
+    }
+
+    const link = await writer.close()
+    assert.deepEqual(link, {
+      cid: CID.parse(
+        "bafybeiduffmtppi4cwa6olo3ggmoehvtdtcd47y6ddoodhyvcv7y3zvgnq"
+      ),
+      contentByteLength: 144177,
+      dagByteLength: 144372,
+    })
   })
 })
