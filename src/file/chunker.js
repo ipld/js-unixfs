@@ -92,9 +92,10 @@ export const append = (state, bytes) => {
       if (chunks.length === 0) {
         return { state: { ...state, buffer }, chunks: EMPTY }
       } else {
+        const { chunk, ...rest } = state
         return {
-          state: { ...state, status: "multiple", buffer },
-          chunks: [state.chunk, ...chunks],
+          state: { ...rest, status: "multiple", buffer },
+          chunks: [chunk, ...chunks],
         }
       }
     case "multiple":

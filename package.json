@@ -11,6 +11,7 @@
     "prepare:proto": "pbjs -t static-module -w es6 -r unixfs --force-number --no-verify --no-delimited --no-create --no-beautify --no-defaults --lint eslint-disable -o gen/unixfs.js ./unixfs.proto",
     "prepare:proto-types": "pbts -o gen/unixfs.ts gen/unixfs.js",
     "gen": "node ./scripts/gen.js",
+    "gen:matrix": "node ./scripts/matrix.js",
     "test:web": "playwright-test test/*.spec.js --cov && nyc report",
     "test:node": "c8 --check-coverage --branches 100 --functions 100 --lines 100 mocha test/*.spec.js",
     "t": "mocha test/*.spec.js",
@@ -20,6 +21,7 @@
   "dependencies": {
     "@ipld/dag-pb": "^2.1.15",
     "@web-std/stream": "1.0.1",
+    "rabin-wasm": "^0.1.5",
     "actor": "^2.2.1",
     "protobufjs": "^6.11.2"
   },
@@ -49,7 +51,11 @@
     "nyc": "^15.1.0",
     "playwright-test": "^7.2.2",
     "typescript": "^4.5.5",
-    "@web-std/file": "^3.0.2"
+    "@web-std/file": "^3.0.2",
+    "tsv": "^0.2.0",
+    "@types/tsv": "^0.2.1",
+    "fzstd": "^0.0.4",
+    "@web-std/fetch": "^4.0.0"
   },
   "license": "(Apache-2.0 AND MIT)"
 }
