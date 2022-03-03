@@ -16,6 +16,7 @@ describe("layout queue", () => {
     )
 
     assert.deepEqual(v1, {
+      mutable: false,
       needs: {},
       links: {},
       nodes: {},
@@ -36,6 +37,7 @@ describe("layout queue", () => {
     )
 
     assert.deepEqual(v2, {
+      mutable: false,
       needs: {},
       links: {},
       nodes: {},
@@ -62,6 +64,7 @@ describe("layout queue", () => {
     )
 
     assert.deepEqual(v1, {
+      mutable: false,
       needs: {},
       links: {},
       nodes: {},
@@ -85,6 +88,7 @@ describe("layout queue", () => {
     assert.deepEqual(
       v1,
       {
+        mutable: false,
         needs: { [1]: 0 },
         links: {},
         nodes: { [0]: { count: 1, children: [1] } },
@@ -98,6 +102,7 @@ describe("layout queue", () => {
     assert.deepEqual(
       v2,
       {
+        mutable: false,
         needs: {},
         links: {},
         nodes: {},
@@ -127,6 +132,7 @@ describe("layout queue", () => {
     assert.deepEqual(
       v1,
       {
+        mutable: false,
         needs: { [1]: 9, [3]: 9, [5]: 9 },
         links: {
           [2]: createLink("b"),
@@ -148,6 +154,7 @@ describe("layout queue", () => {
     assert.deepEqual(
       v2,
       {
+        mutable: false,
         needs: { [3]: 9, [5]: 9 },
         links: {
           [1]: createLink("a"),
@@ -170,6 +177,7 @@ describe("layout queue", () => {
     assert.deepEqual(
       v3,
       {
+        mutable: false,
         needs: { [3]: 9 },
         links: {
           [1]: createLink("a"),
@@ -193,6 +201,7 @@ describe("layout queue", () => {
     assert.deepEqual(
       v4,
       {
+        mutable: false,
         needs: {},
         links: {},
         nodes: {},
@@ -230,6 +239,7 @@ describe("layout queue", () => {
     assert.deepEqual(
       v1,
       {
+        mutable: false,
         needs: { [1]: 9, [3]: 9, [4]: 9 },
         links: {
           [2]: createLink("b"),
@@ -251,6 +261,7 @@ describe("layout queue", () => {
     assert.deepEqual(
       v2,
       {
+        mutable: false,
         needs: { [3]: 9, [4]: 9 },
         links: {
           [1]: createLink("a"),
@@ -273,6 +284,7 @@ describe("layout queue", () => {
     assert.deepEqual(
       v3,
       {
+        mutable: false,
         needs: { [3]: 9 },
         links: {
           [1]: createLink("a"),
@@ -296,6 +308,7 @@ describe("layout queue", () => {
     assert.deepEqual(
       v4,
       {
+        mutable: false,
         needs: {},
         links: {},
         nodes: {},
@@ -391,13 +404,15 @@ describe("random operation order", () => {
   ]
 
   for (const order of shuffle(ops)) {
-    it(`${order
+    const title = `${order
       .map(op =>
         op.type === "addLink"
           ? `addLink(${op.id})`
           : `addNode(${String(op.node.id)})`
       )
-      .join(".")}`, () => {
+      .join(".")}`
+
+    it(title, () => {
       let queue = Queue.empty()
       for (const op of order) {
         queue =
@@ -409,6 +424,7 @@ describe("random operation order", () => {
       assert.deepEqual(
         { ...queue, linked: [] },
         {
+          mutable: false,
           needs: {},
           links: {},
           nodes: {},
