@@ -6,6 +6,15 @@ export * from "./queue/api.js"
  * @returns {Queue.Result}
  */
 export const empty = () => ({
+  mutable: false,
+  needs: {},
+  nodes: {},
+  links: {},
+  linked: [],
+})
+
+export const mutable = () => ({
+  mutable: true,
   needs: {},
   nodes: {},
   links: {},
@@ -28,29 +37,34 @@ export const addNode = (node, queue) => addNodes([node], queue)
 /**
  *
  * @param {Layout.Branch[]} newNodes
- * @param {Queue.Queue} queue
+ * @param {Queue.Queue} input
  * @returns {Queue.Result}
  */
-export const addNodes = (newNodes, queue) => {
-  let { nodes, linked = [], links } = queue
-  let needs = queue.needs
+export const addNodes = (newNodes, input) => {
+  let queue = patch(input, {})
   for (const node of newNodes) {
-    const { ready, has, wants } = collect(node.children, links)
+    const { ready, has, wants } = collect(node.children, queue.links)
     // If node isn't waiting on any of the children it's ready to be linked
     // so we add linked node diretly.
     if (wants.length === 0) {
-      links = remove(links, has, queue.links)
-      linked = push(linked, { id: node.id, links: ready }, queue.linked)
+      queue = patch(queue, {
+        links: assign(undefined, has),
+        linked: [{ id: node.id, links: ready }],
+      })
     } else {
-      needs = set(needs, wants, node.id)
-      nodes = set(nodes, [node.id], {
-        children: node.children,
-        count: wants.length,
+      queue = patch(queue, {
+        needs: assign(node.id, wants),
+        nodes: {
+          [node.id]: {
+            children: node.children,
+            count: wants.length,
+          },
+        },
       })
     }
   }
 
-  return { ...queue, nodes, links, linked, needs }
+  return queue
 }
 
 /**
@@ -69,7 +83,6 @@ export const addNodes = (newNodes, queue) => {
 export const addLink = (id, link, queue) => {
   const nodeID = queue.needs[id]
   const node = queue.nodes[nodeID]
-  const linked = queue.linked || []
   // We have node than needs this link.
   if (node != null) {
     // This is the only link it needed so we materialize the node and remove
@@ -80,38 +93,105 @@ export const addLink = (id, link, queue) => {
         [id]: link,
       })
 
-      return {
-        ...queue,
-        needs: remove(queue.needs, [id]),
-        linked: [...linked, { id: nodeID, links: ready }],
-        links: remove(queue.links, has),
-        nodes: remove(queue.nodes, [nodeID]),
-      }
+      return patch(queue, {
+        needs: { [id]: undefined },
+        links: assign(undefined, has),
+        nodes: { [nodeID]: undefined },
+        linked: [{ id: nodeID, links: ready }],
+      })
     }
     // If node needs more links we just reduce a want count and remove this
     // need.
     else {
-      return {
-        ...queue,
-        needs: remove(queue.needs, [id]),
-        links: { ...queue.links, [id]: link },
-        linked,
+      return patch(queue, {
+        needs: { [id]: undefined },
+        links: { [id]: link },
         nodes: {
-          ...queue.nodes,
           [nodeID]: {
             ...node,
             count: node.count - 1,
           },
         },
-      }
+      })
     }
   }
   // If we have no one waiting for this link just add it to the queue
   else {
-    return { ...queue, links: { ...queue.links, [id]: link }, linked }
+    return patch(queue, {
+      links: { [id]: link },
+    })
   }
 }
 
+/**
+ *
+ * @param {Queue.Queue} queue
+ * @param {Queue.Delta} delta
+ */
+
+const patch = (queue, { needs, nodes, links, linked }) => {
+  const result = queue.mutable ? queue : { ...queue }
+  const original = queue.mutable ? BLANK : undefined
+
+  if (needs) {
+    result.needs = patchDict(queue.needs, needs, original)
+  }
+
+  if (nodes) {
+    result.nodes = patchDict(queue.nodes, nodes, original)
+  }
+
+  if (links) {
+    result.links = patchDict(queue.links, links, original)
+  }
+
+  result.linked = linked
+    ? append(queue.linked || EMPTY, linked, EMPTY)
+    : queue.linked || []
+
+  return /** @type {Queue.Result} */ (result)
+}
+
+/**
+ * @template V
+ * @template {PropertyKey} K
+ * @param {V} value
+ * @param {K[]} keys
+ * @returns {Record<K, V>}
+ */
+
+const assign = (value, keys) => {
+  const delta = /** @type {Record<K, V>} */ ({})
+  for (const key of keys) {
+    delta[key] = value
+  }
+
+  return delta
+}
+
+/**
+ * @template {PropertyKey} K
+ * @template V
+ * @param {Record<K, V>} target
+ *
+ * @param {Record<K, V|void>} delta
+ * @param {Record<K, V>} original
+ * @returns {Record<K, V>}
+ */
+
+const patchDict = (target, delta, original = target) => {
+  const result = target === original ? { ...target } : target
+  for (const entry of Object.entries(delta)) {
+    const [id, value] = /** @type {[K, V|void]} */ (entry)
+    if (value == null) {
+      delete result[id]
+    } else {
+      result[id] = value
+    }
+  }
+
+  return result
+}
 /**
  *
  * @param {Iterable<[Queue.NodeID, Queue.Link]>} entries
@@ -133,52 +213,19 @@ export const isEmpty = queue =>
   Object.keys(queue.nodes).length === 0 && Object.keys(queue.links).length === 0
 
 /**
- * @template {PropertyKey} K
- * @template V
- * @param {Record<K, V>} from
- * @param {K[]} keys
- * @param {Record<K, V>} original
- */
-const remove = (from, keys, original = from) => {
-  if (keys.length === 0) {
-    return from
-  } else {
-    const next = from === original ? { ...from } : from
-    for (const key of keys) {
-      delete next[key]
-    }
-    return next
-  }
-}
-
-/**
- * @template {PropertyKey} K
- * @template V
- * @param {Record<K, V>} target
- * @param {K[]} keys
- * @param {V} value
- * @param {Record<K, V>} original
- */
-const set = (target, keys, value, original = target) => {
-  const object = target === original ? { ...target } : target
-  for (const key of keys) {
-    object[key] = value
-  }
-  return object
-}
-
-/**
  * @template T
+ * @param {T[]} target
  * @param {T[]} items
- * @param {T} item
  * @param {T[]} original
  */
-const push = (items, item, original = items) => {
-  if (items === original) {
-    return [...items, item]
+const append = (target, items, original = target) => {
+  if (target === original) {
+    return [...target, ...items]
   } else {
-    items.push(item)
-    return items
+    for (const item of items) {
+      target.push(item)
+    }
+    return target
   }
 }
 
@@ -205,3 +252,5 @@ const collect = (children, source) => {
 }
 
 const EMPTY = /** @type {never[]} */ (Object.freeze([]))
+
+const BLANK = /** @type {Record<never, never>} */ (Object.freeze({}))

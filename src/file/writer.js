@@ -102,7 +102,16 @@ export const init = (metadata, blockQueue, config) => {
     blockQueue,
     chunker: Chunker.open({ chunker: config.chunker }),
     layout: config.fileLayout.open(config.fileLayout.options),
-    nodeQueue: Queue.empty(),
+    // Note: Writing in large slices e.g. 1GiB at a time creates large queues
+    // with around `16353` items. Immutable version ends up copying it every
+    // time state of the queue changes, which introduces significant overhead.
+    // To avoid this overhead we use mutable implementation which is API
+    // compatible but makes in place updates.
+    // TODO: We should consider using Persistent bit-partitioned vector tries
+    // instead of arrays which would provide immutable interface with neglegable
+    // overhead.
+    // @see https://github.com/Gozala/vectrie
+    nodeQueue: Queue.mutable(),
   }
 }
 /**

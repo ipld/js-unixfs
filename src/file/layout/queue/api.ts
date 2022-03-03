@@ -6,6 +6,7 @@ export interface LinkedNode {
 }
 
 export interface Queue {
+  mutable: boolean
   /**
    * Maps link IDs to the node IDs that need them.
    */
@@ -19,6 +20,14 @@ export interface Queue {
   links: Record<NodeID, Link>
 
   // List of file nodes that are ready.
+  linked?: LinkedNode[]
+}
+
+export interface Delta {
+  needs?: Record<NodeID, void | NodeID>
+  nodes?: Record<NodeID, void | { children: NodeID[]; count: number }>
+  links?: Record<NodeID, void | Link>
+
   linked?: LinkedNode[]
 }
 

@@ -77,7 +77,9 @@ export const close = async view => {
     view.state.blockQueue.close()
     return state.link
   } else {
-    panic("Expected writer to be in 'linked' state after close")
+    panic(
+      `Expected writer to be in 'linked' state after close, but it is in "${state.status}" instead`
+    )
   }
 }
 
