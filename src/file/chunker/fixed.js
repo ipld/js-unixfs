@@ -25,11 +25,17 @@ export const withMaxChunkSize = maxChunkSize => ({
 
 /**
  * @param {FixedSize} maxChunkSize
- * @param {Uint8Array} buffer
+ * @param {API.Buffer} buffer
+ * @param {boolean} end
  * @returns {number[]}
  */
-export const cut = ({ maxChunkSize }, { byteLength }) => {
+export const cut = ({ maxChunkSize }, { byteLength }, end) => {
   // number of fixed size chunks that would fit
   const n = (byteLength / maxChunkSize) | 0
-  return new Array(n).fill(maxChunkSize)
+  const chunks = new Array(n).fill(maxChunkSize)
+  const lastChunkSize = end ? byteLength - n * maxChunkSize : 0
+  if (lastChunkSize > 0) {
+    chunks.push(lastChunkSize)
+  }
+  return chunks
 }

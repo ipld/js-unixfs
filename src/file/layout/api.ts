@@ -8,6 +8,7 @@ import type {
   MultihashHasher,
   Phantom,
 } from "../../unixfs.js"
+import * as Chunker from "../chunker/api.js"
 
 export interface Layout<
   Options = unknown,
@@ -46,7 +47,7 @@ export interface Layout<
    * DAG node sticking it into `state.nodes`. Importer than will take nodes
    * that were added and encode them into blocks.
    */
-  write(state: State, leaves: Uint8Array[]): WriteResult<State>
+  write(state: State, leaves: Chunker.Buffer[]): WriteResult<State>
 
   /**
    * After importer passed all the leaves to builders `write` it will call
@@ -76,7 +77,7 @@ export interface Branch {
 
 export interface Leaf {
   id: NodeID
-  content: Uint8Array
+  content: Chunker.Buffer
 
   children?: void
 }

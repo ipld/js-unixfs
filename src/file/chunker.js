@@ -1,6 +1,7 @@
 /* eslint-disable no-nested-ternary */
 /* eslint-disable no-unused-vars */
 import * as Chunker from "./chunker/api.js"
+import * as BufferQueue from "./chunker/buffer.js"
 import { unreachable, EMPTY, EMPTY_BUFFER } from "../writer/util.js"
 export * from "./chunker/api.js"
 
@@ -12,15 +13,17 @@ export * from "./chunker/api.js"
  * @typedef {{
  * status: 'none'
  * config: Config
- * buffer: Uint8Array
+ * buffer: Chunker.Buffer
+ * byteOffset: number
  * }} EmptyState
  * Represents empty state where no chunks have been found yet.
  *
  * @typedef {{
  * status: 'single'
+ * byteOffset: number
  * config: Config
- * buffer: Uint8Array
- * chunk: Uint8Array
+ * buffer: Chunker.Buffer
+ * chunk: Chunker.Buffer
  * }} SingleChunkState
  * Represents state where single chunk have been found. In this
  * state it is not yet clear which file layout can be used, because
@@ -28,8 +31,9 @@ export * from "./chunker/api.js"
  *
  * @typedef {{
  * status: 'multiple'
+ * byteOffset: number
  * config: Config
- * buffer: Uint8Array
+ * buffer: Chunker.Buffer
  * }} MultiChunkState
  * Represents state where more than one chunks have been found.
  *
@@ -37,7 +41,7 @@ export * from "./chunker/api.js"
  *
  * @typedef {{
  * state: State
- * chunks: Uint8Array[]
+ * chunks: Chunker.Buffer[]
  * }} Update
  */
 
@@ -47,8 +51,9 @@ export * from "./chunker/api.js"
  */
 export const open = config => ({
   config,
+  byteOffset: 0,
   status: "none",
-  buffer: EMPTY_BUFFER,
+  buffer: BufferQueue.empty(),
 })
 
 /**
@@ -68,39 +73,53 @@ export const chunks = update => update.chunks
  */
 export const append = (state, bytes) => {
   const { config } = state
-  const { buffer, chunks } = split(concat(state.buffer, bytes), config.chunker)
+  const byteOffset = state.byteOffset + bytes.byteLength
+  const { buffer, chunks } = split(
+    state.buffer.push(bytes),
+    // concat(state.buffer, bytes),
+    config.chunker,
+    state.byteOffset,
+    false
+  )
+
   switch (state.status) {
     case "none":
       switch (chunks.length) {
         case 0:
           return {
-            state: { ...state, buffer },
+            state: { ...state, byteOffset, buffer },
             chunks: EMPTY,
           }
         case 1:
           return {
-            state: { ...state, status: "single", buffer, chunk: chunks[0] },
+            state: {
+              ...state,
+              status: "single",
+              byteOffset,
+              buffer,
+              chunk: chunks[0],
+            },
             chunks: EMPTY,
           }
         default:
           return {
-            state: { ...state, status: "multiple", buffer },
+            state: { ...state, status: "multiple", byteOffset, buffer },
             chunks,
           }
       }
     case "single":
       if (chunks.length === 0) {
-        return { state: { ...state, buffer }, chunks: EMPTY }
+        return { state: { ...state, buffer, byteOffset }, chunks: EMPTY }
       } else {
         const { chunk, ...rest } = state
         return {
-          state: { ...rest, status: "multiple", buffer },
+          state: { ...rest, status: "multiple", byteOffset, buffer },
           chunks: [chunk, ...chunks],
         }
       }
     case "multiple":
       return {
-        state: { ...state, buffer },
+        state: { ...state, byteOffset, buffer },
         chunks,
       }
     default:
@@ -110,30 +129,28 @@ export const append = (state, bytes) => {
 
 /**
  * @param {State} state
- * @returns {{single: true, chunk:Uint8Array}|{single: false, chunks: Uint8Array[]}}
+ * @returns {{single: true, chunk:Chunker.Buffer}|{single: false, chunks: Chunker.Buffer[]}}
  */
 export const close = state => {
-  const { buffer } = state
+  const { buffer, config } = state
+  // flush remaining bytes in the buffer
+  const { chunks } = split(buffer, config.chunker, state.byteOffset, true)
+
   switch (state.status) {
-    case "none":
-      return {
-        single: true,
-        chunk: buffer,
-      }
+    case "none": {
+      return chunks.length === 1
+        ? { single: true, chunk: chunks[0] }
+        : { single: false, chunks }
+    }
     case "single": {
-      if (buffer.byteLength > 0) {
-        return {
-          single: false,
-          chunks: [state.chunk, buffer],
-        }
-      } else {
-        return { single: true, chunk: state.chunk }
-      }
+      return chunks.length === 0
+        ? { single: true, chunk: state.chunk }
+        : { single: false, chunks: [state.chunk, ...chunks] }
     }
     case "multiple": {
       return {
         single: false,
-        chunks: buffer.byteLength > 0 ? [buffer] : EMPTY,
+        chunks,
       }
     }
     default:
@@ -143,22 +160,37 @@ export const close = state => {
 
 /**
  * @param {Chunker.Chunker} chunker
- * @param {Uint8Array} input
- * @returns {{buffer:Uint8Array, chunks:Uint8Array[]}}
+ * @param {Chunker.Buffer} input
+ * @param {number} byteOffset
+ * @param {boolean} end
+ * @returns {{buffer:Chunker.Buffer, chunks:Chunker.Buffer[]}}
  */
 
-export const split = (input, chunker) => {
+export const split = (input, chunker, byteOffset, end) => {
   let buffer = input
-  /** @type {Uint8Array[]} */
+  /** @type {Chunker.Buffer[]} */
   const chunks = []
-  const sizes = chunker.cut(chunker.context, buffer)
+  const sizes =
+    chunker.type === "Stateful"
+      ? chunker.cut(chunker.context, buffer.subarray(byteOffset), end)
+      : chunker.cut(chunker.context, buffer, end)
+
   let offset = 0
   for (const size of sizes) {
-    const chunk = buffer.subarray(offset, offset + size)
-    chunks.push(chunk)
-    offset += size
+    // We may be splitting empty buffer in which case there will be no chunks
+    // in it so we make sure that we do not emit empty buffer.
+    if (size > 0) {
+      const chunk = buffer.subarray(offset, offset + size)
+      chunks.push(chunk)
+      offset += size
+    }
   }
-  buffer = buffer.subarray(offset)
+  buffer =
+    offset === buffer.byteLength
+      ? BufferQueue.empty()
+      : offset === 0
+      ? buffer
+      : buffer.subarray(offset)
 
   return { buffer, chunks }
 }

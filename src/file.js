@@ -24,6 +24,16 @@ export const defaults = () => ({
   createCID: CID.createV1,
 })
 
+/**
+ *
+ * @param {Partial<API.FileWriterConfig>} config
+ * @returns {API.FileWriterConfig}
+ */
+export const configure = config => ({
+  ...defaults(),
+  ...config,
+})
+
 export const UnixFSLeaf = {
   code: UnixFS.code,
   name: UnixFS.name,

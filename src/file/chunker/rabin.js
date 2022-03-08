@@ -1,7 +1,10 @@
-
 // eslint-disable-next-line no-unused-vars
-import * as API from './api.js'
-import * as RabinLib from './rabin/rabin-wasm.js'
+import * as API from "./api.js"
+import * as RabinLib from "./rabin/rabin-wasm.js"
+
+const AVARAGE = 262144
+const WINDOW = 16
+const POLYNOM = 17437180132763653
 
 /**
  * @typedef {object} Rabin
@@ -13,24 +16,24 @@ import * as RabinLib from './rabin/rabin-wasm.js'
  *
  * @typedef {object} RabinConfig
  * @property {number} avg
- * @property {number} [min]
- * @property {number} [max]
+ * @property {number} min
+ * @property {number} max
  * @property {number} window
  * @property {number} polynomial
  */
 
 /**
- * @param {RabinConfig} config
+ * @param {Partial<RabinConfig>} config
  * @returns {Promise<API.StatefulChunker<RabinLib.Rabin>>}
  */
-export const withConfig = async ({
-  avg,
+export const create = async ({
+  avg = AVARAGE,
   min = avg / 3,
-  max = avg + (avg / 2),
-  window,
-  polynomial
-}) => ({
-  type: 'Stateful',
+  max = avg + avg / 2,
+  window = WINDOW,
+  polynomial = POLYNOM,
+} = {}) => ({
+  type: "Stateful",
   context: await RabinLib.create(
     Math.floor(Math.log2(avg)),
     min,
@@ -38,7 +41,7 @@ export const withConfig = async ({
     window,
     polynomial
   ),
-  cut
+  cut,
 })
 
 /**
