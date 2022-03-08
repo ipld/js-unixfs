@@ -13,7 +13,7 @@ export * from "../writer/api.js"
 import * as ChunkerService from "./chunker.js"
 import * as LayoutService from "./layout.js"
 
-export type { Chunker, Layout, MultihashHasher, MultihashDigest }
+export type { Chunker, Layout, MultihashHasher, MultihashDigest, Block }
 
 export interface FileWriterService<O = unknown, S = unknown>
   extends FileWriterConfig<O, S> {

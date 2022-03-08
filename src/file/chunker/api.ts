@@ -1,7 +1,17 @@
+export interface Buffer {
+  readonly length: number
+  readonly byteLength: number
+  slice(start?: number, end?: number): Buffer
+  subarray(start?: number, end?: number): Buffer
+  push(bytes: Uint8Array): Buffer
+  get(offset: number): number | undefined
+  copyTo(target: Uint8Array, offset: number): Uint8Array
+}
+
 /**
  * Chunker API can be used to slice up the file content according
  * to specific logic. It is designed with following properties in mind:
- * 
+ *
  * 1. **Stateless** - Chunker does not retain any state across the calls. This
  *    implies that calling `cut` function on the same bytes would produce same
  *    array of sizes. Do note however, that when chunker is used to chunk stream
@@ -31,9 +41,10 @@ export interface ChunkerAPI<T> {
    * buffer contains no valid chunks.
    *
    * **Note:** Consumer of the chunker is responsible for dealing with remaining
-   * bytes in the buffer when end of the stream is reached.
+   * bytes in the buffer, that is unless `end` is true signalling chunker that
+   * end of the stream is reached.
    */
-  cut(context:T, buffer:Uint8Array):number[]
+  cut(context: T, buffer: Buffer, end?: boolean): Iterable<number>
 }
 
 /**
@@ -43,13 +54,12 @@ export interface ChunkerAPI<T> {
  * previously seen bytes.
  */
 export interface StatefulChunker<T> extends ChunkerAPI<T> {
-  type: 'Stateful'
+  type: "Stateful"
 }
 
-export interface StatelessChunker<T extends Readonly<unknown>> extends ChunkerAPI<T> {
-  type: 'Stateless'
+export interface StatelessChunker<T extends Readonly<unknown>>
+  extends ChunkerAPI<T> {
+  type: "Stateless"
 }
 
-export type Chunker<T=any> =
-  | StatefulChunker<T>
-  | StatelessChunker<T>
+export type Chunker<T = any> = StatefulChunker<T> | StatelessChunker<T>

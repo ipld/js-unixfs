@@ -21,6 +21,7 @@
   "dependencies": {
     "@ipld/dag-pb": "^2.1.15",
     "@web-std/stream": "1.0.1",
+    "rabin-rs": "^2.0.0",
     "rabin-wasm": "^0.1.5",
     "actor": "^2.2.1",
     "protobufjs": "^6.11.2"

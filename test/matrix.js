@@ -2,7 +2,7 @@ import { CID, File, fetch } from "./util.js"
 import * as Trickle from "../src/file/layout/trickle.js"
 import * as Balanced from "../src/file/layout/balanced.js"
 import * as FixedSize from "../src/file/chunker/fixed.js"
-import * as Rabin from "../src/file/chunker/rabin.js"
+import * as Rabin from "../src/file/chunker/rabin.new.js"
 import * as API from "../src/file/api.js"
 import { UnixFSLeaf } from "../src/file.js"
 import * as RawLeaf from "multiformats/codecs/raw"
@@ -81,14 +81,15 @@ const parseChunker = input => {
       .split("-")
       .map(n => parseInt(n))
 
-    return Rabin.withConfig({
-      avg,
-      min,
-      max,
-      window: 64,
-      // @see https://github.com/hugomrdias/rabin-wasm/blob/f0cf7ce248a268cc65c389ece6882df25f92fc02/assembly/index.ts#L144
-      polynomial: 0x3da3358b4dc173,
-    })
+    return Rabin.create(
+      Rabin.configure({
+        avg,
+        min,
+        max,
+      })
+    )
+  } else if (input === "rabin") {
+    return Rabin.create()
   } else {
     throw new Error(`Unknown chunker ${input}`)
   }

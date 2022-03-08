@@ -125,6 +125,7 @@ export const write = (state, bytes) => {
     // Chunk up provided bytes
     const chunker = Chunker.append(state.chunker, bytes)
     const chunks = Chunker.chunks(chunker)
+
     // Pass chunks to layout engine to produce nodes
     const { nodes, leaves, layout } = state.config.fileLayout.write(
       state.layout,
@@ -260,7 +261,7 @@ const encodeLeaves = (leaves, config) =>
  * @returns {Task.Task<API.EncodedFile, never>}
  */
 const encodeLeaf = function* ({ hasher, createCID }, { id, content }, encoder) {
-  const bytes = encoder.encode(content)
+  const bytes = encoder.encode(asUint8Array(content))
   const hash = yield* Task.wait(hasher.digest(bytes))
   const cid = createCID(encoder.code, hash)
 
@@ -325,3 +326,14 @@ export const writeBlock = function* (blockQueue, block) {
   }
   blockQueue.enqueue(block)
 }
+
+/**
+ *
+ * @param {Uint8Array|Chunker.Buffer} buffer
+ * @returns
+ */
+
+const asUint8Array = buffer =>
+  buffer instanceof Uint8Array
+    ? buffer
+    : buffer.copyTo(new Uint8Array(buffer.byteLength), 0)

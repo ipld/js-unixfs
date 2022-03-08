@@ -1,4 +1,5 @@
 import * as Layout from "./api.js"
+import * as Chunker from "./../chunker/api.js"
 
 /**
  * Type representing a state of the balanced tree. First row hold leaves coming
@@ -138,7 +139,7 @@ export const open = ({ width }) => ({
 /**
  *
  * @param {Balanced} state
- * @param {Uint8Array[]} slices
+ * @param {Chunker.Buffer[]} slices
  * @returns {Layout.WriteResult<Balanced>}
  */
 export const write = (state, slices) => {
