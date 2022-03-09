@@ -16,7 +16,8 @@
     "test:node": "c8 --check-coverage --branches 100 --functions 100 --lines 100 mocha test/*.spec.js",
     "t": "mocha test/*.spec.js",
     "coverage": "c8 --reporter=html mocha test/test-*.js && npm_config_yes=true npx st -d coverage -p 8080",
-    "typecheck": "tsc --build"
+    "typecheck": "tsc --build",
+    "test:convergence": "mocha test/convergence.js"
   },
   "dependencies": {
     "@ipld/dag-pb": "^2.1.15",
