@@ -1,4 +1,5 @@
 import * as Layout from "./api.js"
+import * as Chunker from "../chunker/api.js"
 
 /**
  * @typedef {{
@@ -60,7 +61,7 @@ export const open = options => ({
 
 /**
  * @param {Trickle} state
- * @param {Uint8Array[]} leaves
+ * @param {Chunker.Buffer[]} leaves
  * @returns {Layout.WriteResult<Trickle>}
  */
 export const write = (state, leaves) => {

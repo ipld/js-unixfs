@@ -60,7 +60,7 @@ export const parseConfig = async input => {
     fileEncoder: UnixFS,
     hasher: sha256,
     fileLayout: input.trickle ? Trickle : Balanced,
-    createCID: CID.create.bind(CID, /** @type {0|1} */ (input.cidVersion)),
+    createCID: input.cidVersion === 0 ? createCIDv0 : CID.createV1,
     chunkerConfig: input.chunker,
     chunker: await parseChunker(input.chunker),
     cid: CID.parse(input.cid),
@@ -68,6 +68,13 @@ export const parseConfig = async input => {
   }
 }
 
+/**
+ * @param {number} code
+ * @param {API.MultihashDigest} hash
+ * @returns
+ */
+const createCIDv0 = (code, hash) =>
+  code === UnixFS.code ? CID.createV0(hash) : CID.createV1(code, hash)
 /**
  * @param {string} input
  */
