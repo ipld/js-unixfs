@@ -1,4 +1,7 @@
 import * as Layout from "./api.js"
+import * as Chunker from "../chunker/api.js"
+
+export const name = "flat"
 
 /**
  * @typedef {{}} Options
@@ -25,7 +28,7 @@ export const open = options => ({
 
 /**
  * @param {Flat} state
- * @param {Uint8Array[]} chunks
+ * @param {Chunker.Buffer[]} chunks
  * @returns {Layout.WriteResult<Flat>}
  */
 export const write = ({ lastID, ...layout }, chunks) => {

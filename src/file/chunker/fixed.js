@@ -1,6 +1,7 @@
 // eslint-disable-next-line no-unused-vars
 import * as API from "./api.js"
 
+export const name = "fixed"
 /**
  * @typedef {Object} FixedSize
  * @property {number} maxChunkSize
@@ -20,6 +21,7 @@ export const type = "Stateless"
 export const withMaxChunkSize = maxChunkSize => ({
   type: "Stateless",
   context: { maxChunkSize },
+  name,
   cut,
 })
 

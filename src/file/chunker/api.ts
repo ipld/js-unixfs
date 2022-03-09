@@ -28,6 +28,7 @@ export interface Buffer {
  *    control amount of momory to be used.
  */
 export interface ChunkerAPI<T> {
+  readonly name?: string
   /**
    * Context used by the chunker. It usually represents chunker
    * configuration like max, min chunk size etc. Usually chunker implementation

@@ -4,6 +4,8 @@ import * as Rabin from "rabin-rs"
 const AVARAGE = 262144
 const WINDOW = 16
 
+export const name = "rabin"
+
 /**
  * @typedef {object} Config
  * @property {number} avg
@@ -54,6 +56,7 @@ export const create = async (config = defaults()) => ({
     config.max,
     config.window
   ),
+  name,
   cut,
 })
 
@@ -74,6 +77,7 @@ export const createWithPolynom = async (polynom, config = defaults()) => ({
     ),
     config
   ),
+  name,
   cut,
 })
 

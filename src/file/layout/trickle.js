@@ -1,6 +1,8 @@
 import * as Layout from "./api.js"
 import * as Chunker from "../chunker/api.js"
 
+export const name = "trickle"
+
 /**
  * @typedef {{
  * maxSiblingSubgroups: number
