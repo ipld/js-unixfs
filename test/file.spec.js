@@ -12,7 +12,6 @@ import * as API from "../src/file/api.js"
 import * as RawLeaf from "multiformats/codecs/raw"
 import * as UnixFS from "../src/unixfs.js"
 import { sha256 } from "multiformats/hashes/sha2"
-import * as FS from "fs"
 
 const CHUNK_SIZE = 262144
 describe("test file", () => {

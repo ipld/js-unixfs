@@ -431,10 +431,10 @@
   resolved "https://registry.npmjs.org/@zxing/text-encoding/-/text-encoding-0.9.0.tgz"
   integrity sha512-U/4aVJ2mxI0aDNI8Uq0wEhMgY+u4CNtEb0om3+y3+niDAsoTCOB33UF0sxpzqzdqXLqmvc+vZyAt4O8pPdfkwA==
 
-actor@^2.2.1:
-  version "2.2.1"
-  resolved "https://registry.npmjs.org/actor/-/actor-2.2.1.tgz"
-  integrity sha512-8a7uxvf7m7873CgF12nw+HrIqJnOjzwXny1aZ+VjaJpHK6D2gH110rq4/rgQlKxL8Y/SZcy+7l/QAYgWKMe3Gw==
+actor@^2.3.0:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/actor/-/actor-2.3.0.tgz#28f830502af7928e1234fddc9444388b8bc481d2"
+  integrity sha512-v2MgCtSBUm/pF7O7gArnxu9aUwyLyl57zhRHWvqXK/QVTasXsu2DgwLFjABibz9jtxtT9du+11IJBQmnILl7sw==
 
 agent-base@6, agent-base@^6.0.2:
   version "6.0.2"
@@ -2353,10 +2353,10 @@ queue-microtask@^1.2.2:
   resolved "https://registry.npmjs.org/queue-microtask/-/queue-microtask-1.2.3.tgz"
   integrity sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==
 
-rabin-rs@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/rabin-rs/-/rabin-rs-2.0.0.tgz#524ab65c973a9988b8e13f4cca995eb6daf2ea22"
-  integrity sha512-O79/sGci9PtyADBdL8bs142FuoL2NrK2HjSDHseFYW8RiDfdqQy0T5J/RiczK91RKgVCDlNiYHFRXR4/QnUo+w==
+rabin-rs@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/rabin-rs/-/rabin-rs-2.1.0.tgz#87b4f2dea7ca69380f1fa6b9e476d99380e7dc96"
+  integrity sha512-5y72gAXPzIBsAMHcpxZP8eMDuDT98qMP1BqSDHRbHkJJXEgWIN1lA47LxUqzsK6jknOJtgfkQr9v+7qMlFDm6g==
 
 rabin-wasm@^0.1.5:
   version "0.1.5"

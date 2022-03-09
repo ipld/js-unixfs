@@ -1,6 +1,6 @@
 import { File } from "@web-std/file"
 import { CID } from "multiformats"
-import { fetch } from "@web-std/fetch"
+import fetch from "@web-std/fetch"
 import { sha256 } from "multiformats/hashes/sha2"
 
 const utf8Encoder = new TextEncoder()
