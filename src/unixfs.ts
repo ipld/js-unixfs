@@ -224,7 +224,7 @@ export interface FlatDirectory {
   readonly type: NodeType.Directory
   readonly entries: ReadonlyArray<DirectoryLink>
 
-  readonly metadata: Metadata
+  readonly metadata?: Metadata
 }
 
 export type DirectoryLink = NamedDAGLink<File> | NamedDAGLink<Directory>
@@ -240,9 +240,7 @@ export interface NamedDAGLink<T> extends DAGLink<T> {
  *
  * @see https://en.wikipedia.org/wiki/Hash_array_mapped_trie
  */
-export interface ShardedDirectory extends DirectoryShard {
-  readonly metadata: Metadata
-}
+export interface ShardedDirectory extends DirectoryShard {}
 
 /**
  * Logical represenatation of the shard of the sharded directory. Please note
@@ -288,7 +286,7 @@ export interface Symlink {
    */
   readonly content: ByteView<string>
 
-  readonly metadata: Metadata
+  readonly metadata?: Metadata
 }
 
 /**

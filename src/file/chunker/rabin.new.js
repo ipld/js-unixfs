@@ -79,7 +79,7 @@ export const createWithPolynom = async (polynom, config = defaults()) => ({
 
 /**
  * @param {Context} rabin
- * @param {Uint8Array} buffer
+ * @param {API.Buffer} buffer
  * @param {boolean} end
  */
-export const cut = (rabin, buffer, end) => Rabin.cut(rabin, buffer, end)
+export const cut = (rabin, buffer, end) => Rabin.cutBuffer(rabin, buffer, end)

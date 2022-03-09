@@ -1,14 +1,8 @@
-// @ts-nocheck
 /* eslint-env mocha */
-import * as PB from "@ipld/dag-pb"
-// import { UnixFS } from "ipfs-unixfs"
-// import { fromString as utf8Encode } from "uint8arrays/from-string"
-import * as fs from "fs"
 import * as unixfs from "../src/lib.js"
-import { expect, assert } from "chai"
+import { assert } from "chai"
 import * as blocks from "./fixtures.js"
-
-// const fixtures = new URL("../../../ipfs-unixfs/test/fixtures/", import.meta.url)
+import { fetch } from "./util.js"
 
 const utf8 = new TextEncoder()
 const MURMUR = 0x22
@@ -27,12 +21,12 @@ describe("unixfs-format", () => {
     })
 
     const node = unixfs.decode(block)
-    if (node.type != unixfs.NodeType.File) assert.fail("expected file type")
-
-    if (node.layout !== "simple") assert.fail("expected simple layout")
-
-    assert.equal(unixfs.filesize(node), 6)
-    assert.deepEqual(node.content, utf8.encode("batata"))
+    assert.deepEqual(node, {
+      type: unixfs.NodeType.File,
+      layout: "simple",
+      metadata: {},
+      content: utf8.encode("batata"),
+    })
   })
 
   it("raw", () => {
@@ -92,16 +86,10 @@ describe("unixfs-format", () => {
     })
 
     const node = unixfs.decode(block)
-    if (node.type !== unixfs.NodeType.File) assert.fail("expect file")
-    node
-    if (node.layout !== "simple") assert.fail("expect simple")
-    assert.deepEqual(node.metadata, { mode })
-
-    expect().to.deep.equal({
+    assert.deepEqual(node, {
       type: unixfs.NodeType.File,
-      kind: "simple",
-      mode,
-      filesize: 4,
+      layout: "simple",
+      metadata: { mode },
       content: utf8Encode("mode"),
     })
   })
@@ -109,14 +97,15 @@ describe("unixfs-format", () => {
   it("omits default file mode", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.File,
-      mode: parseInt("0644", 8),
+      layout: "simple",
+      metadata: { mode: parseInt("0644", 8) },
       content: utf8Encode("0644"),
     })
 
-    expect(unixfs.decode(block)).to.deep.equal({
-      kind: "simple",
+    assert.deepEqual(unixfs.decode(block), {
+      layout: "simple",
+      metadata: {},
       type: unixfs.NodeType.File,
-      filesize: 4,
       content: utf8Encode("0644"),
     })
   })
@@ -124,13 +113,13 @@ describe("unixfs-format", () => {
   it("dir mode", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.Directory,
-      mode: parseInt("0775", 8),
+      metadata: { mode: parseInt("0775", 8) },
       entries: [],
     })
 
-    expect(unixfs.decode(block)).to.deep.equal({
+    assert.deepEqual(unixfs.decode(block), {
       type: unixfs.NodeType.Directory,
-      mode: parseInt("0775", 8),
+      metadata: { mode: parseInt("0775", 8) },
       entries: [],
     })
   })
@@ -138,12 +127,13 @@ describe("unixfs-format", () => {
   it("omits default dir mode", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.Directory,
-      mode: parseInt("0755", 8),
+      metadata: { mode: parseInt("0755", 8) },
       entries: [],
     })
 
-    expect(unixfs.decode(block)).to.deep.equal({
+    assert.deepEqual(unixfs.decode(block), {
       type: unixfs.NodeType.Directory,
+      metadata: {},
       entries: [],
     })
   })
@@ -151,16 +141,17 @@ describe("unixfs-format", () => {
   it("hamt mode", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.HAMTShard,
-      mode: parseInt("0775", 8),
+      metadata: { mode: parseInt("0775", 8) },
       bitfield: new Uint8Array(),
       fanout: 16,
       hashType: MURMUR,
       entries: [],
     })
 
-    expect(unixfs.decode(block)).to.deep.equal({
+    assert.deepEqual(unixfs.decode(block), {
       type: unixfs.NodeType.HAMTShard,
-      mode: parseInt("0775", 8),
+      bitfield: new Uint8Array(),
+      metadata: { mode: parseInt("0775", 8) },
       fanout: 16,
       hashType: MURMUR,
       entries: [],
@@ -170,18 +161,20 @@ describe("unixfs-format", () => {
   it("omits default hamt mode", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.HAMTShard,
-      mode: parseInt("0755", 8),
+      metadata: { mode: parseInt("0755", 8) },
       bitfield: new Uint8Array(),
       fanout: 128,
       hashType: MURMUR,
       entries: [],
     })
 
-    expect(unixfs.decode(block)).to.deep.equal({
+    assert.deepEqual(unixfs.decode(block), {
       type: unixfs.NodeType.HAMTShard,
+      bitfield: new Uint8Array(),
       fanout: 128,
       hashType: MURMUR,
       entries: [],
+      metadata: {},
     })
   })
 
@@ -192,32 +185,32 @@ describe("unixfs-format", () => {
     }
     const block = unixfs.encode({
       type: unixfs.NodeType.File,
-      mtime,
+      layout: "simple",
+      metadata: { mtime },
       content: utf8Encode("mtime"),
     })
 
-    expect(unixfs.decode(block)).to.be.deep.equal({
+    assert.deepEqual(unixfs.decode(block), {
       type: unixfs.NodeType.File,
-      kind: "simple",
-      mtime: { secs: 5, nsecs: 0 },
+      layout: "simple",
+      metadata: { mtime: { secs: 5, nsecs: 0 } },
       content: utf8Encode("mtime"),
-      filesize: 5,
     })
   })
 
   it("mtime without nsecs", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.File,
-      mtime: { secs: 5 },
+      layout: "simple",
+      metadata: { mtime: { secs: 5 } },
       content: utf8Encode("mtime"),
     })
 
-    expect(unixfs.decode(block)).to.be.deep.equal({
+    assert.deepEqual(unixfs.decode(block), {
       type: unixfs.NodeType.File,
-      kind: "simple",
-      mtime: { secs: 5, nsecs: 0 },
+      layout: "simple",
+      metadata: { mtime: { secs: 5, nsecs: 0 } },
       content: utf8Encode("mtime"),
-      filesize: 5,
     })
   })
 
@@ -226,15 +219,17 @@ describe("unixfs-format", () => {
 
     const block = unixfs.encode({
       type: unixfs.NodeType.File,
+      layout: "simple",
       content: utf8Encode("bits"),
-      mode,
+      metadata: { mode },
     })
 
-    expect(unixfs.decode(block)).to.deep.equal({
+    const node = /** @type {unixfs.File} */ (unixfs.decode(block))
+
+    assert.deepEqual(node, {
       type: unixfs.NodeType.File,
-      kind: "simple",
-      mode,
-      filesize: 4,
+      layout: "simple",
+      metadata: { mode },
       content: utf8Encode("bits"),
     })
   })
@@ -242,12 +237,11 @@ describe("unixfs-format", () => {
   it("empty", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.File,
+      layout: "simple",
       content: new Uint8Array(),
     })
 
-    expect(block.slice(2)).to.deep.equal(
-      Uint8Array.from([0x08, 0x02, 0x18, 0x00])
-    )
+    assert.deepEqual(block.slice(2), Uint8Array.from([0x08, 0x02, 0x18, 0x00]))
   })
 
   it("symlink", () => {
@@ -256,9 +250,10 @@ describe("unixfs-format", () => {
       content: utf8Encode("file.txt"),
     })
 
-    expect(unixfs.decode(block)).to.be.deep.equal({
+    assert.deepEqual(unixfs.decode(block), {
       type: unixfs.NodeType.Symlink,
       content: utf8Encode("file.txt"),
+      metadata: {},
     })
   })
 
@@ -266,13 +261,17 @@ describe("unixfs-format", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.Symlink,
       content: utf8Encode("file.txt"),
-      mode: parseInt("0664", 8),
+      metadata: {
+        mode: parseInt("0664", 8),
+      },
     })
 
-    expect(unixfs.decode(block)).to.be.deep.equal({
+    assert.deepEqual(unixfs.decode(block), {
       type: unixfs.NodeType.Symlink,
       content: utf8Encode("file.txt"),
-      mode: parseInt("0664", 8),
+      metadata: {
+        mode: parseInt("0664", 8),
+      },
     })
   })
 
@@ -280,12 +279,15 @@ describe("unixfs-format", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.Symlink,
       content: utf8Encode("file.txt"),
-      mode: parseInt("0644", 8),
+      metadata: {
+        mode: parseInt("0644", 8),
+      },
     })
 
-    expect(unixfs.decode(block)).to.be.deep.equal({
+    assert.deepEqual(unixfs.decode(block), {
       type: unixfs.NodeType.Symlink,
       content: utf8Encode("file.txt"),
+      metadata: {},
     })
   })
 
@@ -293,17 +295,21 @@ describe("unixfs-format", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.Symlink,
       content: utf8Encode("file.txt"),
-      mtime: {
-        secs: 5,
+      metadata: {
+        mtime: {
+          secs: 5,
+        },
       },
     })
 
-    expect(unixfs.decode(block)).to.be.deep.equal({
+    assert.deepEqual(unixfs.decode(block), {
       type: unixfs.NodeType.Symlink,
       content: utf8Encode("file.txt"),
-      mtime: {
-        secs: 5,
-        nsecs: 0,
+      metadata: {
+        mtime: {
+          secs: 5,
+          nsecs: 0,
+        },
       },
     })
   })
@@ -312,69 +318,90 @@ describe("unixfs-format", () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.Symlink,
       content: utf8Encode("file.txt"),
-      mtime: {
-        secs: 5,
-        nsecs: 7,
+      metadata: {
+        mtime: {
+          secs: 5,
+          nsecs: 7,
+        },
       },
     })
 
-    expect(unixfs.decode(block)).to.be.deep.equal({
+    assert.deepEqual(unixfs.decode(block), {
       type: unixfs.NodeType.Symlink,
       content: utf8Encode("file.txt"),
-      mtime: {
-        secs: 5,
-        nsecs: 7,
+      metadata: {
+        mtime: {
+          secs: 5,
+          nsecs: 7,
+        },
       },
     })
   })
 })
 
 describe.skip("interop", () => {
-  it("raw", () => {
+  it("raw", async () => {
     const block = unixfs.encode({
       type: unixfs.NodeType.File,
+      layout: "simple",
       content: utf8Encode("Hello UnixFS\n"),
     })
 
-    expect(block.slice(2)).to.deep.equal(
-      new Uint8Array(fs.readFileSync(new URL("raw.unixfs", fixtures)))
+    const fixture = await fetch("./fixtures/utilraw.unixfs")
+
+    assert.deepEqual(
+      block.slice(2),
+      new Uint8Array(await fixture.arrayBuffer())
     )
   })
 
-  it("directory", () => {
+  it("directory", async () => {
     const block = unixfs.encode({
-      type: "Directory",
-      links: [],
+      type: unixfs.NodeType.Directory,
+
+      entries: [],
     })
 
-    expect(block.slice(2)).to.deep.equal(
-      new Uint8Array(fs.readFileSync(new URL("directory.unixfs", fixtures)))
+    const fixture = await fetch("./fixtures/directory.unixfs")
+
+    assert.deepEqual(
+      block.slice(2),
+      new Uint8Array(await fixture.arrayBuffer())
     )
   })
 
-  it("file", () => {
+  it("file", async () => {
     const block = unixfs.encode({
-      type: "File",
+      type: unixfs.NodeType.File,
+      layout: "simple",
       content: utf8Encode("Hello UnixFS\n"),
     })
 
-    expect(block.slice(2)).to.deep.equal(
-      new Uint8Array(fs.readFileSync(new URL("file.txt.unixfs", fixtures)))
+    const fixture = await fetch("./fixtures/file.txt.unixfs")
+
+    assert.deepEqual(
+      block.slice(2),
+      new Uint8Array(await fixture.arrayBuffer())
     )
   })
 
-  it("symlink", () => {
+  it.skip("symlink", async () => {
     const block = unixfs.encode({
-      type: "Symlink",
+      type: unixfs.NodeType.Symlink,
       content: utf8Encode("file.txt"),
     })
 
-    const symlink = fs.readFileSync(new URL("symlink.txt.unixfs", fixtures))
-    expect(block.slice(2)).to.deep.equal(new Uint8Array(symlink))
+    const fixture = await fetch("./fixtures/symlink.txt.unixfs")
 
-    expect(unixfs.decode(block)).to.be.deep.equal({
-      type: "Symlink",
+    assert.deepEqual(
+      block.slice(2),
+      new Uint8Array(await fixture.arrayBuffer())
+    )
+
+    assert.deepEqual(unixfs.decode(block), {
+      type: unixfs.NodeType.Symlink,
       content: utf8Encode("file.txt"),
+      metadata: {},
     })
   })
 })

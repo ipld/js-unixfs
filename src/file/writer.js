@@ -4,7 +4,7 @@ import * as Layout from "./layout/api.js"
 import * as UnixFS from "../lib.js"
 import * as Channel from "../writer/channel.js"
 import * as Chunker from "./chunker.js"
-import { panic, unreachable } from "../writer/util.js"
+import { panic, unreachable, defer } from "../writer/util.js"
 import * as Queue from "./layout/queue.js"
 
 /**
@@ -27,6 +27,7 @@ import * as Queue from "./layout/queue.js"
  * readonly config: API.FileWriterConfig<unknown, Layout>
  * readonly blockQueue: API.BlockQueue
  * readonly rootID: Layout.NodeID
+ * readonly end?: Task.Fork<void, never>
  * chunker?: null
  * layout?: null
  * nodeQueue: Queue.Queue
@@ -64,6 +65,7 @@ import * as Queue from "./layout/queue.js"
  * |{type:"link", link:API.EncodedFile}
  * |{type:"block"}
  * |{type: "close"}
+ * |{type: "end"}
  * } Message
  */
 
@@ -82,6 +84,8 @@ export const update = (message, state) => {
       return { state, effect: Task.none() }
     case "close":
       return close(state)
+    case "end":
+      return { state, effect: Task.none() }
     default:
       return unreachable`File Writer got unknown message ${message}`
   }
@@ -165,6 +169,7 @@ export const link = (state, { id, link, block }) => {
   let { linked, ...nodeQueue } = Queue.addLink(id, link, state.nodeQueue)
 
   const tasks = encodeNodes(linked, state.config)
+
   /** @type {State<Layout>} */
   const newState =
     state.status === "closed" && id === state.rootID
@@ -176,11 +181,19 @@ export const link = (state, { id, link, block }) => {
         }
       : { ...state, nodeQueue }
 
+  // If we just linked a root and there is a **suspended** "end" task we create
+  // a task to resume it.
+  const end =
+    state.status === "closed" && id === state.rootID && state.end
+      ? state.end.resume()
+      : Task.none()
+
   return {
     state: newState,
     effect: Task.listen({
       link: Task.effects(tasks),
       block: writeBlock(state.blockQueue, block),
+      end,
     }),
   }
 }
@@ -227,6 +240,14 @@ export const close = state => {
         ...encodeNodes(linked, state.config),
       ]
 
+      // We want to keep run loop around until root node is linked. To
+      // accomplish this we fork a task that suspends itself, which we will
+      // resume when root is linked (see link function).
+      // Below we join this forked task in our effect, this way effect is not
+      // complete until task forked task is, which will do once we link the
+      // root.
+      const fork = Task.fork(Task.suspend())
+
       return {
         state: {
           ...state,
@@ -234,9 +255,13 @@ export const close = state => {
           layout: null,
           rootID: root.id,
           status: "closed",
+          end: fork,
           nodeQueue,
         },
-        effect: Task.listen({ link: Task.effects(tasks) }),
+        effect: Task.listen({
+          link: Task.effects(tasks),
+          end: Task.join(fork),
+        }),
       }
     }
   } else {
@@ -296,7 +321,7 @@ export const encodeNode = function* (config, { id, links }, metadata) {
     parts: links,
     metadata,
   })
-  const hash = yield* Task.wait(config.hasher.digest(bytes))
+  const hash = yield* Task.wait(Promise.resolve(config.hasher.digest(bytes)))
   const cid = config.createCID(config.fileEncoder.code, hash)
   const block = { bytes, cid }
   const link = {

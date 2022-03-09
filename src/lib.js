@@ -286,7 +286,7 @@ export const encodeDirectory = node =>
   encodePB(
     {
       Type: node.type,
-      ...encodeDirectoryMetadata(node.metadata),
+      ...encodeDirectoryMetadata(node.metadata || BLANK),
     },
     node.entries.map(encodeNamedLink)
   )
@@ -359,22 +359,25 @@ export const createSymlink = (path, metadata = BLANK) => ({
 
 /**
  * @param {UnixFS.Symlink} node
+ * @param {boolean} [ignoreMetadata]
  * @returns {UnixFS.ByteView<UnixFS.Symlink>}
  */
-export const encodeSymlink = ({ content, metadata }) =>
+export const encodeSymlink = (node, ignoreMetadata = false) => {
+  const metadata = ignoreMetadata ? BLANK : Object(node).metadata
   // We do not include filesize on symlinks because that is what go-ipfs does
   // when doing `ipfs add mysymlink`. js-ipfs on the other hand seems to store
   // it, here we choose to follow go-ipfs
   // @see https://explore.ipld.io/#/explore/QmPZ1CTc5fYErTH2XXDGrfsPsHicYXtkZeVojGycwAfm3v
   // @see https://github.com/ipfs/js-ipfs-unixfs/issues/195
-  encodePB(
+  return encodePB(
     {
       Type: NodeType.Symlink,
-      Data: content,
-      ...encodeMetadata(metadata),
+      Data: node.content,
+      ...encodeMetadata(metadata || BLANK),
     },
     []
   )
+}
 
 /**
  * @template {UnixFS.Node} T
@@ -420,7 +423,7 @@ export const decode = bytes => {
     objects: false,
   })
   const metadata = {
-    mode,
+    ...(mode && { mode }),
     ...decodeMtime(mtime),
   }
   const links = pb.Links
@@ -633,16 +636,16 @@ class SimpleFileView {
   constructor(content, metadata) {
     this.content = content
     this.metadata = metadata
-  }
-  /** @type {"simple"} */
-  get layout() {
-    return "simple"
-  }
-  /**
-   * @returns {NodeType.File}
-   */
-  get type() {
-    return NodeType.File
+    /**
+     * @readonly
+     * @type {"simple"}
+     */
+    this.layout = "simple"
+    /**
+     * @readonly
+     * @type {NodeType.File}
+     */
+    this.type = NodeType.File
   }
 
   get filesize() {
