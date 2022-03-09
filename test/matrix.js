@@ -83,10 +83,14 @@ const parseChunker = input => {
     const size = parseInt(input.slice("size-".length).trim())
     return FixedSize.withMaxChunkSize(size)
   } else if (input.startsWith("rabin-")) {
-    const [min, avg, max] = input
+    const params = input
       .slice("rabin-".length)
       .split("-")
       .map(n => parseInt(n))
+
+    const [min, avg, max] =
+      /** @type {[undefined|number, number, undefined|number]} */
+      (params.length === 1 ? [undefined, ...params] : params)
 
     return Rabin.create(
       Rabin.configure({
