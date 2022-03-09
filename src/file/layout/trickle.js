@@ -66,15 +66,15 @@ export const open = options => ({
  */
 export const write = (state, leaves) => {
   /** @type {Layout.WriteResult<Trickle>} */
-  let result = { layout: state, nodes: [], leaves: [] }
+  let result = { layout: { ...state }, nodes: [], leaves: [] }
   for (const content of leaves) {
     const leaf =
       content.byteLength === 0
         ? { id: EMTPY_LEAF_ID, content }
-        : { id: result.layout.lastID++, content }
+        : { id: ++result.layout.lastID, content }
 
     result.leaves.push(leaf)
-    result = addLeaf(result, result.layout.lastID)
+    result = addLeaf(result, leaf.id)
   }
 
   return result

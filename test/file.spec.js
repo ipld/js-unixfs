@@ -153,4 +153,34 @@ describe("test file", () => {
 
     assert.deepEqual((await blocks).length, 4)
   })
+
+  it("trickle layout", async function () {
+    this.timeout(30000)
+    const content = hashrecur({
+      byteLength: CHUNK_SIZE * 2,
+    })
+
+    const { writer, ...importer } = FileImporter.createImporter(
+      {},
+      FileImporter.configure({
+        chunker: FixedSize.withMaxChunkSize(CHUNK_SIZE),
+        fileLayout: Trickle,
+      })
+    )
+    const collector = collect(importer.blocks)
+
+    for await (const slice of content) {
+      writer.write(slice)
+    }
+    const link = await writer.close()
+    const blocks = await collector
+
+    assert.deepEqual(link, {
+      cid: CID.parse(
+        "bafybeifovo36yvep6m53p3ghmrx6a3ig6c2ydvxp4yjmlqgg74clvudesy"
+      ),
+      contentByteLength: 524288,
+      dagByteLength: 524424,
+    })
+  })
 })
