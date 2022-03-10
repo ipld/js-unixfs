@@ -58,7 +58,7 @@ export const open = options => ({
   leafCount: 0,
   levelCutoffs: [],
   tail: null,
-  lastID: EMTPY_LEAF_ID + 1,
+  lastID: EMTPY_LEAF_ID,
 })
 
 /**

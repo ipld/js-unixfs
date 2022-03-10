@@ -4,7 +4,7 @@ import * as Balanced from "../src/file/layout/balanced.js"
 import * as FixedSize from "../src/file/chunker/fixed.js"
 import * as Rabin from "../src/file/chunker/rabin.new.js"
 import * as API from "../src/file/api.js"
-import { UnixFSLeaf } from "../src/file.js"
+import { UnixFSLeaf, UnixFSRawLeaf } from "../src/file.js"
 import * as RawLeaf from "multiformats/codecs/raw"
 import * as UnixFS from "../src/unixfs.js"
 import { sha256 } from "multiformats/hashes/sha2"
@@ -47,7 +47,11 @@ const base = new URL("./dataset/testdata/", import.meta.url)
  */
 export const parseConfig = async input => {
   const url = new URL(input.source, base)
-  const fileChunkEncoder = input.rawLeaves ? RawLeaf : UnixFSLeaf
+  const fileChunkEncoder = input.rawLeaves
+    ? RawLeaf
+    : input.trickle
+    ? UnixFSRawLeaf
+    : UnixFSLeaf
 
   return {
     url: url,

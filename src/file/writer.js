@@ -135,6 +135,7 @@ export const write = (state, bytes) => {
       state.layout,
       chunks
     )
+
     const { linked, ...nodeQueue } = Queue.addNodes(nodes, state.nodeQueue)
 
     // Create leaf encode tasks for all new leaves
@@ -230,6 +231,7 @@ export const close = state => {
         layout,
         state.metadata
       )
+
       const { linked, ...nodeQueue } = Queue.addNodes(
         [...nodes, ...rest, root],
         state.nodeQueue

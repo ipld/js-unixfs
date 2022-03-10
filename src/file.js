@@ -40,6 +40,12 @@ export const UnixFSLeaf = {
   encode: UnixFS.encodeFileChunk,
 }
 
+export const UnixFSRawLeaf = {
+  code: UnixFS.code,
+  name: UnixFS.name,
+  encode: UnixFS.encodeRaw,
+}
+
 /**
  * @template [Layout=unknown]
  * @param {UnixFS.Metadata} [metadata]

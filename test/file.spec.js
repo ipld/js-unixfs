@@ -163,8 +163,9 @@ describe("test file", () => {
     const { writer, ...importer } = FileImporter.createImporter(
       {},
       FileImporter.configure({
-        chunker: FixedSize.withMaxChunkSize(CHUNK_SIZE),
+        chunker: FixedSize.withMaxChunkSize(1300),
         fileLayout: Trickle,
+        fileChunkEncoder: FileImporter.UnixFSRawLeaf,
       })
     )
     const collector = collect(importer.blocks)
@@ -177,10 +178,41 @@ describe("test file", () => {
 
     assert.deepEqual(link, {
       cid: CID.parse(
-        "bafybeifovo36yvep6m53p3ghmrx6a3ig6c2ydvxp4yjmlqgg74clvudesy"
+        "bafybeidia54tfr7ycw2ls2mxyjpcto42mriytx2ymlwgwsjqzner5wqc5u"
       ),
       contentByteLength: 524288,
-      dagByteLength: 524424,
+      dagByteLength: 548251,
+    })
+  })
+
+  it("trickle layout with overflow", async function () {
+    this.timeout(30000)
+    const content = hashrecur({
+      byteLength: CHUNK_SIZE * 2,
+    })
+
+    const { writer, ...importer } = FileImporter.createImporter(
+      {},
+      FileImporter.configure({
+        chunker: FixedSize.withMaxChunkSize(100000),
+        fileLayout: Trickle.configure({ maxDirectLeaves: 5 }),
+        fileChunkEncoder: FileImporter.UnixFSRawLeaf,
+      })
+    )
+    const collector = collect(importer.blocks)
+
+    for await (const slice of content) {
+      writer.write(slice)
+    }
+    const link = await writer.close()
+    const blocks = await collector
+
+    assert.deepEqual(link, {
+      cid: CID.parse(
+        "bafybeigu6bkvpxtamauopeu2ejzkxy4wgqa576wmfc6ubusjwhgold4aum"
+      ),
+      contentByteLength: 524288,
+      dagByteLength: 524738,
     })
   })
 })
