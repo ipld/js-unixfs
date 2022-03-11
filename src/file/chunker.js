@@ -138,8 +138,8 @@ export const close = state => {
 
   switch (state.status) {
     case "none": {
-      return chunks.length === 1
-        ? { single: true, chunk: chunks[0] }
+      return chunks.length <= 1
+        ? { single: true, chunk: buffer }
         : { single: false, chunks }
     }
     case "single": {
@@ -187,7 +187,7 @@ export const split = (input, chunker, byteOffset, end) => {
   }
   buffer =
     offset === buffer.byteLength
-      ? BufferQueue.empty()
+      ? buffer
       : offset === 0
       ? buffer
       : buffer.subarray(offset)

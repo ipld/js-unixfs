@@ -18,9 +18,9 @@ const createTest = spec =>
     const { writer, ...importer } = FileImporter.createImporter({}, config)
     const source = await unpackFile(config.url)
 
-    // const car = encodeCar(importer.blocks)
-    // const file = writeFile("temp.car", car)
-    const ready = collect(importer.blocks)
+    const car = encodeCar(importer.blocks)
+    const ready = writeFile("temp.car", car)
+    // const ready = collect(importer.blocks)
 
     // @ts-expect-error - see https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59057
     const stream = /** @type {ReadableStream<Uint8Array>} */ (source.stream())
@@ -84,6 +84,7 @@ const isDisabledTest = config =>
 const tesSet = log => new Set(log.trim().split("\n"))
 
 const only = tesSet(`
+jsipfs add --chunker=size-65535 --trickle=false --raw-leaves=false --cid-version=1 ../testdata/zero_0B.zst
 `)
 
 const timeouts = tesSet(`
