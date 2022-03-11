@@ -144,7 +144,6 @@ const cursor = ({ parts, length }, n) => {
 const HEAD = /** @type {[number, number]} */ (Object.freeze([0, 0]))
 
 /**
- *
  * @param {BufferView} buffer
  * @param {number} [startOffset]
  * @param {number} [endOffset]

@@ -28,7 +28,7 @@ export const open = options => ({
 
 /**
  * @param {Flat} state
- * @param {Chunker.Buffer[]} chunks
+ * @param {Chunker.Chunk[]} chunks
  * @returns {Layout.WriteResult<Flat>}
  */
 export const write = ({ lastID, ...layout }, chunks) => {

@@ -10,62 +10,49 @@ import type {
 } from "../../unixfs.js"
 import * as Chunker from "../chunker/api.js"
 
-export interface Layout<
-  Options = unknown,
-  State extends { nodes?: void; leaves?: void } = object,
-  Result = State & { nodes: Branch[]; leaves: Leaf[] }
-> {
-  /**
-   * DAG layouts are usually configurable through layout specific options.
-   * It is expected that implementations will:
-   *
-   * 1. Come with default options exposed through this field.
-   * 2. Provide a configuration function returning `FileBuilder` with
-   *    customized options.
-   */
-  options: Options
-
+export interface LayoutEngine<Layout> {
   /**
    * When new file is imported importer will call file builders `open`
-   * function passing it file metadata and builder options. Here builder
-   * can initialize implementation specific state according to given
-   * paramateres.
+   * function. Here layout implementation can initialize implementation
+   * specific state.
    *
    * Please note it is important that builder does not mutate any state outside
    * of returned state object as order of calls is non deterministic.
    */
 
-  open(options: Options): State
+  open(): Layout
 
   /**
-   * Importer takes care reading file content chunking it and even producing
-   * leaf blocks for those chunks. After it produced some leaf blocks it will
-   * call `write` passing back builder a state (that was returned by `open`
-   * or previous `write / link` call) and ordered set of leaf block info.
+   * Importer takes care reading file content chunking it. Afet it produces some
+   * chunks it will pass those via `write` call along with current layout a
+   * state (which was returned by `open` or previous `write` calls).
    *
-   * Builder implementation can store that information and / or produce file
-   * DAG node sticking it into `state.nodes`. Importer than will take nodes
-   * that were added and encode them into blocks.
+   * Layout engine implementation is responsible for returning new layout along
+   * with all the leaf and branch nodes it created as a result.
+   *
+   * Note: Layout engine should not hold reference to chunks or nodes to avoid
+   * unecessary memory use.
    */
-  write(state: State, leaves: Chunker.Buffer[]): WriteResult<State>
+  write(layout: Layout, chunks: Chunker.Chunk[]): WriteResult<Layout>
 
   /**
-   * After importer passed all the leaves to builders `write` it will call
-   * `close` so that builder can produce nodes from the remaining leaves
-   * and build up to a root node.
+   * After importer wrote all the chunks through `write` calls it will call
+   * `close` so that layout engine can produce all the remaining nodes and
+   * along with a root.
    */
-  close(state: State, metadata?: Metadata): CloseResult
+  close(layout: Layout, metadata?: Metadata): CloseResult
 }
 
-export type WriteResult<State> = {
-  layout: State
+export type WriteResult<Layout> = {
+  layout: Layout
   nodes: Branch[]
   leaves: Leaf[]
 }
 
 export interface CloseResult {
-  root: Branch
+  root: Node
   nodes: Branch[]
+  leaves: Leaf[]
 }
 
 export interface Branch {
@@ -77,7 +64,7 @@ export interface Branch {
 
 export interface Leaf {
   id: NodeID
-  content: Chunker.Buffer
+  content?: Chunker.Chunk
 
   children?: void
 }

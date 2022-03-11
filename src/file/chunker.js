@@ -1,5 +1,3 @@
-/* eslint-disable no-nested-ternary */
-/* eslint-disable no-unused-vars */
 import * as Chunker from "./chunker/api.js"
 import * as BufferQueue from "./chunker/buffer.js"
 import { unreachable, EMPTY, EMPTY_BUFFER } from "../writer/util.js"
@@ -13,7 +11,7 @@ export * from "./chunker/api.js"
  * @typedef {{
  * status: 'none'
  * config: Config
- * buffer: Chunker.Buffer
+ * buffer: Chunker.Chunk
  * byteOffset: number
  * }} EmptyState
  * Represents empty state where no chunks have been found yet.
@@ -22,8 +20,8 @@ export * from "./chunker/api.js"
  * status: 'single'
  * byteOffset: number
  * config: Config
- * buffer: Chunker.Buffer
- * chunk: Chunker.Buffer
+ * buffer: Chunker.Chunk
+ * chunk: Chunker.Chunk
  * }} SingleChunkState
  * Represents state where single chunk have been found. In this
  * state it is not yet clear which file layout can be used, because
@@ -33,7 +31,7 @@ export * from "./chunker/api.js"
  * status: 'multiple'
  * byteOffset: number
  * config: Config
- * buffer: Chunker.Buffer
+ * buffer: Chunker.Chunk
  * }} MultiChunkState
  * Represents state where more than one chunks have been found.
  *
@@ -41,7 +39,7 @@ export * from "./chunker/api.js"
  *
  * @typedef {{
  * state: State
- * chunks: Chunker.Buffer[]
+ * chunks: Chunker.Chunk[]
  * }} Update
  */
 
@@ -129,7 +127,7 @@ export const append = (state, bytes) => {
 
 /**
  * @param {State} state
- * @returns {{single: true, chunk:Chunker.Buffer}|{single: false, chunks: Chunker.Buffer[]}}
+ * @returns {{single: true, chunk:Chunker.Chunk}|{single: false, chunks: Chunker.Chunk[]}}
  */
 export const close = state => {
   const { buffer, config } = state
@@ -160,15 +158,15 @@ export const close = state => {
 
 /**
  * @param {Chunker.Chunker} chunker
- * @param {Chunker.Buffer} input
+ * @param {Chunker.Chunk} input
  * @param {number} byteOffset
  * @param {boolean} end
- * @returns {{buffer:Chunker.Buffer, chunks:Chunker.Buffer[]}}
+ * @returns {{buffer:Chunker.Chunk, chunks:Chunker.Chunk[]}}
  */
 
 export const split = (input, chunker, byteOffset, end) => {
   let buffer = input
-  /** @type {Chunker.Buffer[]} */
+  /** @type {Chunker.Chunk[]} */
   const chunks = []
   const sizes =
     chunker.type === "Stateful"

@@ -1,5 +1,5 @@
 import type { Chunker } from "./chunker/api.js"
-import type { Layout, NodeID } from "./layout/api.js"
+import type { LayoutEngine, NodeID } from "./layout/api.js"
 import * as UnixFS from "../unixfs.js"
 import type {
   CID,
@@ -13,14 +13,13 @@ export * from "../writer/api.js"
 import * as ChunkerService from "./chunker.js"
 import * as LayoutService from "./layout.js"
 
-export type { Chunker, Layout, MultihashHasher, MultihashDigest, Block }
+export type { Chunker, LayoutEngine, MultihashHasher, MultihashDigest, Block }
 
-export interface FileWriterService<O = unknown, S = unknown>
-  extends FileWriterConfig<O, S> {
+export interface FileWriterService<S = unknown> extends FileWriterConfig<S> {
   blockQueue: BlockQueue
 }
 
-export interface FileWriterConfig<O = unknown, S = unknown> {
+export interface FileWriterConfig<S = unknown> {
   /**
    * Chunker which will be used to split file content into chunks.
    */
@@ -45,7 +44,7 @@ export interface FileWriterConfig<O = unknown, S = unknown> {
   /**
    * Builder that will be used to build file DAG from the leaf nodes.
    */
-  fileLayout: Layout<O, S>
+  fileLayout: LayoutEngine<S>
 
   /**
    * Hasher used to compute multihash for each block in the file.

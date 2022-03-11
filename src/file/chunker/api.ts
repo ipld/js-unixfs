@@ -1,10 +1,7 @@
-export interface Buffer {
+export interface Chunk {
   readonly length: number
   readonly byteLength: number
-  slice(start?: number, end?: number): Buffer
-  subarray(start?: number, end?: number): Buffer
-  push(bytes: Uint8Array): Buffer
-  get(offset: number): number | undefined
+  readonly byteOffset: number
   copyTo(target: Uint8Array, offset: number): Uint8Array
 }
 
@@ -45,7 +42,7 @@ export interface ChunkerAPI<T> {
    * bytes in the buffer, that is unless `end` is true signalling chunker that
    * end of the stream is reached.
    */
-  cut(context: T, buffer: Buffer, end?: boolean): Iterable<number>
+  cut(context: T, buffer: Chunk, end?: boolean): Iterable<number>
 }
 
 /**

@@ -18,8 +18,11 @@ const createTest = spec =>
     const { writer, ...importer } = FileImporter.createImporter({}, config)
     const source = await unpackFile(config.url)
 
+    // await writeFile("fail.txt", iterate(source.stream()))
+    // return
+
     const car = encodeCar(importer.blocks)
-    const ready = writeFile("temp.car", car)
+    const ready = writeFile("expect.car", car)
     // const ready = collect(importer.blocks)
 
     // @ts-expect-error - see https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59057
@@ -84,6 +87,7 @@ const isDisabledTest = config =>
 const tesSet = log => new Set(log.trim().split("\n"))
 
 const only = tesSet(`
+ipfs add --chunker=size-65535 --trickle=true --raw-leaves=false --cid-version=1 ../testdata/uicro_1B.zst
 `)
 
 const timeouts = tesSet(`

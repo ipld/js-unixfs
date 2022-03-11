@@ -255,4 +255,21 @@ describe("test file", () => {
       dagByteLength: 8411,
     })
   })
+
+  it("write empty with defaults", async function () {
+    const { writer, ...importer } = FileImporter.createImporter()
+    const collector = collect(importer.blocks)
+
+    writer.write(new Uint8Array())
+    const link = await writer.close()
+    const blocks = await collector
+
+    assert.deepEqual(link, {
+      cid: CID.parse(
+        "bafybeif7ztnhq65lumvvtr4ekcwd2ifwgm3awq4zfr3srh462rwyinlb4y"
+      ),
+      contentByteLength: 0,
+      dagByteLength: 6,
+    })
+  })
 })

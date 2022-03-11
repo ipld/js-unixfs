@@ -89,6 +89,7 @@ import * as Chunker from "./../chunker/api.js"
  *
  * @typedef {{
  * width: number
+ * head: Chunker.Chunk | null
  * leafIndex: number[]
  * nodeIndex: number[][]
  * lastID: number
@@ -114,23 +115,24 @@ class Node {
  * @property {number} width - Max children per node.
  *
  * @param {number} width
- * @returns {Layout.Layout<{width:number}, Balanced>}
+ * @returns {Layout.LayoutEngine<Balanced>}
  */
 export const withWidth = width => ({
-  options: { width },
-  open,
+  open: () => open({ width }),
   write,
   close,
 })
 
-export const options = { width: 174 }
+export const defaults = { width: 174 }
 
 /**
- * @param {Options} options
+ * @param {Options} [options]
  * @returns {Balanced}
  */
-export const open = ({ width }) => ({
+export const open = ({ width } = defaults) => ({
   width,
+
+  head: null,
   leafIndex: [],
   nodeIndex: [],
   lastID: 0,
@@ -138,24 +140,52 @@ export const open = ({ width }) => ({
 
 /**
  *
- * @param {Balanced} state
- * @param {Chunker.Buffer[]} slices
+ * @param {Balanced} layout
+ * @param {Chunker.Chunk[]} chunks
  * @returns {Layout.WriteResult<Balanced>}
  */
-export const write = (state, slices) => {
-  const leafIndex = [...state.leafIndex]
-  const leaves = []
-  let lastID = state.lastID
-  for (const slice of slices) {
-    lastID++
-    leaves.push({ id: lastID, content: slice })
-    leafIndex.push(lastID)
-  }
-
-  if (leafIndex.length >= state.width) {
-    return flush({ ...state, leafIndex, lastID }, leaves)
+export const write = (layout, chunks) => {
+  if (chunks.length === 0) {
+    return { layout, nodes: EMPTY, leaves: EMPTY }
   } else {
-    return { layout: { ...state, leafIndex, lastID }, leaves, nodes: EMPTY }
+    let { lastID } = layout
+    // We need to hold on to the first chunk until we either get a second chunk
+    // (at which point we know our layout will have branches) or until we close
+    // (at which point our layout will be single leaf or node depneding on
+    // metadata)
+    const [head, slices] = layout.head
+      ? // If we had a head we have more then two chunks (we already checked
+        // chunks weren't empty) so we process head along with other chunks.
+        [null, (chunks.unshift(layout.head), chunks)]
+      : // If we have no head no leaves and got only one chunk we have to save it
+      // until we can decide what to do with it.
+      chunks.length === 1 && layout.leafIndex.length === 0
+      ? [chunks[0], EMPTY]
+      : // Otherwise we have no head but got enough chunks to know we'll have a
+        // node.
+        [null, chunks]
+
+    if (slices.length === 0) {
+      return { layout: { ...layout, head }, nodes: EMPTY, leaves: EMPTY }
+    } else {
+      const leafIndex = [...layout.leafIndex]
+      const leaves = []
+      for (const chunk of slices) {
+        const leaf = { id: ++lastID, content: chunk }
+        leaves.push(leaf)
+        leafIndex.push(leaf.id)
+      }
+
+      if (leafIndex.length >= layout.width) {
+        return flush({ ...layout, leafIndex, head, lastID }, leaves)
+      } else {
+        return {
+          layout: { ...layout, head, leafIndex, lastID },
+          leaves,
+          nodes: EMPTY,
+        }
+      }
+    }
   }
 }
 
@@ -200,27 +230,42 @@ export const flush = (state, leaves = EMPTY, nodes = [], close = false) => {
 }
 
 /**
- * @param {Balanced} state
+ * @param {Balanced} layout
  * @param {Layout.Metadata} [metadata]
  * @returns {Layout.CloseResult}
  */
-export const close = (state, metadata) => {
-  // Flush with width 1 so all the items will be propagate up the tree
-  // and height of `depth-1` so we propagate nodes all but from the top
-  // most level
-  const { nodes, layout } = flush(state, EMPTY, [], true)
-
-  const { nodeIndex } = layout
-  const height = nodeIndex.length - 1
-  const top = nodeIndex[height]
-
-  if (top.length === 1) {
-    const root = nodes[nodes.length - 1]
-    nodes.length = nodes.length - 1
-    return { root, nodes }
+export const close = (layout, metadata) => {
+  const state = layout
+  if (layout.head) {
+    return {
+      root: { id: 1, content: layout.head, metadata },
+      leaves: EMPTY,
+      nodes: EMPTY,
+    }
+  } else if (layout.leafIndex.length === 0) {
+    return {
+      root: { id: 1, metadata },
+      leaves: EMPTY,
+      nodes: EMPTY,
+    }
   } else {
-    const root = new Node(layout.lastID + 1, top, metadata)
-    return { root, nodes }
+    // Flush with width 1 so all the items will be propagate up the tree
+    // and height of `depth-1` so we propagate nodes all but from the top
+    // most level
+    const { nodes, layout } = flush(state, EMPTY, [], true)
+
+    const { nodeIndex } = layout
+    const height = nodeIndex.length - 1
+
+    const top = nodeIndex[height]
+    if (top.length === 1) {
+      const root = nodes[nodes.length - 1]
+      nodes.length = nodes.length - 1
+      return { root, nodes, leaves: EMPTY }
+    } else {
+      const root = new Node(layout.lastID + 1, top, metadata)
+      return { root, nodes, leaves: EMPTY }
+    }
   }
 }
 

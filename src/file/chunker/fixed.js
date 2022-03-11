@@ -27,7 +27,7 @@ export const withMaxChunkSize = maxChunkSize => ({
 
 /**
  * @param {FixedSize} maxChunkSize
- * @param {API.Buffer} buffer
+ * @param {API.Chunk} buffer
  * @param {boolean} end
  * @returns {number[]}
  */

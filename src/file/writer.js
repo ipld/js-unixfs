@@ -3,8 +3,8 @@ import * as API from "./api.js"
 import * as Layout from "./layout/api.js"
 import * as UnixFS from "../lib.js"
 import * as Channel from "../writer/channel.js"
-import * as Chunker from "./chunker.js"
-import { panic, unreachable } from "../writer/util.js"
+import * as Chunker from "./chunker2.js"
+import { EMPTY_BUFFER, panic, unreachable } from "../writer/util.js"
 import * as Queue from "./layout/queue.js"
 
 /**
@@ -12,9 +12,9 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'open'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.FileWriterConfig<unknown, Layout>
+ * readonly config: API.FileWriterConfig<Layout>
  * readonly blockQueue: API.BlockQueue
- * chunker: Chunker.State
+ * chunker: Chunker.Chunker
  * layout: Layout
  * nodeQueue: Queue.Queue
  * }} Open
@@ -24,7 +24,7 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'closed'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.FileWriterConfig<unknown, Layout>
+ * readonly config: API.FileWriterConfig<Layout>
  * readonly blockQueue: API.BlockQueue
  * readonly rootID: Layout.NodeID
  * readonly end?: Task.Fork<void, never>
@@ -38,7 +38,7 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'linked'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.FileWriterConfig<unknown, Layout>
+ * readonly config: API.FileWriterConfig<Layout>
  * readonly blockQueue: API.BlockQueue
  * readonly link: Layout.Link
  * chunker?: null
@@ -105,7 +105,7 @@ export const init = (metadata, blockQueue, config) => {
     config,
     blockQueue,
     chunker: Chunker.open({ chunker: config.chunker }),
-    layout: config.fileLayout.open(config.fileLayout.options),
+    layout: config.fileLayout.open(),
     // Note: Writing in large slices e.g. 1GiB at a time creates large queues
     // with around `16353` items. Immutable version ends up copying it every
     // time state of the queue changes, which introduces significant overhead.
@@ -127,8 +127,7 @@ export const init = (metadata, blockQueue, config) => {
 export const write = (state, bytes) => {
   if (state.status === "open") {
     // Chunk up provided bytes
-    const chunker = Chunker.append(state.chunker, bytes)
-    const chunks = Chunker.chunks(chunker)
+    const { chunks, ...chunker } = Chunker.write(state.chunker, bytes)
 
     // Pass chunks to layout engine to produce nodes
     const { nodes, leaves, layout } = state.config.fileLayout.write(
@@ -141,13 +140,13 @@ export const write = (state, bytes) => {
     // Create leaf encode tasks for all new leaves
     const tasks = [
       ...encodeLeaves(leaves, state.config),
-      ...encodeNodes(linked, state.config),
+      ...encodeBranches(linked, state.config),
     ]
 
     return {
       state: {
         ...state,
-        chunker: Chunker.state(chunker),
+        chunker,
         layout,
         nodeQueue,
       },
@@ -169,7 +168,7 @@ export const write = (state, bytes) => {
 export const link = (state, { id, link, block }) => {
   let { linked, ...nodeQueue } = Queue.addLink(id, link, state.nodeQueue)
 
-  const tasks = encodeNodes(linked, state.config)
+  const tasks = encodeBranches(linked, state.config)
 
   /** @type {State<Layout>} */
   const newState =
@@ -206,66 +205,56 @@ export const link = (state, { id, link, block }) => {
  */
 export const close = state => {
   if (state.status === "open") {
-    const result = Chunker.close(state.chunker)
-    if (result.single) {
-      const root = { id: 0, content: result.chunk }
-      const task = encodeLeaf(state.config, root, state.config.smallFileEncoder)
+    const { chunks } = Chunker.close(state.chunker)
+    const { layout, ...write } = state.config.fileLayout.write(
+      state.layout,
+      chunks
+    )
 
-      return {
-        state: {
-          ...state,
-          chunker: null,
-          layout: null,
-          rootID: root.id,
-          status: "closed",
-        },
-        effect: Task.listen({ link: Task.effect(task) }),
-      }
-    } else {
-      const { chunks } = result
-      const { leaves, nodes, layout } = state.config.fileLayout.write(
-        state.layout,
-        chunks
-      )
+    const { root, ...close } = state.config.fileLayout.close(
+      layout,
+      state.metadata
+    )
 
-      const { root, nodes: rest } = state.config.fileLayout.close(
-        layout,
-        state.metadata
-      )
+    const [nodes, leaves] = isLeafNode(root)
+      ? [
+          [...write.nodes, ...close.nodes],
+          [...write.leaves, ...close.leaves, root],
+        ]
+      : [
+          [...write.nodes, ...close.nodes, root],
+          [...write.leaves, ...close.leaves],
+        ]
 
-      const { linked, ...nodeQueue } = Queue.addNodes(
-        [...nodes, ...rest, root],
-        state.nodeQueue
-      )
+    const { linked, ...nodeQueue } = Queue.addNodes(nodes, state.nodeQueue)
 
-      const tasks = [
-        ...encodeLeaves(leaves, state.config),
-        ...encodeNodes(linked, state.config),
-      ]
+    const tasks = [
+      ...encodeLeaves(leaves, state.config),
+      ...encodeBranches(linked, state.config),
+    ]
 
-      // We want to keep run loop around until root node is linked. To
-      // accomplish this we fork a task that suspends itself, which we will
-      // resume when root is linked (see link function).
-      // Below we join this forked task in our effect, this way effect is not
-      // complete until task forked task is, which will do once we link the
-      // root.
-      const fork = Task.fork(Task.suspend())
+    // We want to keep run loop around until root node is linked. To
+    // accomplish this we fork a task that suspends itself, which we will
+    // resume when root is linked (see link function).
+    // Below we join this forked task in our effect, this way effect is not
+    // complete until task forked task is, which will do once we link the
+    // root.
+    const fork = Task.fork(Task.suspend())
 
-      return {
-        state: {
-          ...state,
-          chunker: null,
-          layout: null,
-          rootID: root.id,
-          status: "closed",
-          end: fork,
-          nodeQueue,
-        },
-        effect: Task.listen({
-          link: Task.effects(tasks),
-          end: Task.join(fork),
-        }),
-      }
+    return {
+      state: {
+        ...state,
+        chunker: null,
+        layout: null,
+        rootID: root.id,
+        status: "closed",
+        end: fork,
+        nodeQueue,
+      },
+      effect: Task.listen({
+        link: Task.effects(tasks),
+        end: Task.join(fork),
+      }),
     }
   } else {
     return { state, effect: Task.none() }
@@ -289,14 +278,14 @@ const encodeLeaves = (leaves, config) =>
  * @returns {Task.Task<API.EncodedFile, never>}
  */
 const encodeLeaf = function* ({ hasher, createCID }, { id, content }, encoder) {
-  const bytes = encoder.encode(asUint8Array(content))
+  const bytes = encoder.encode(content ? asUint8Array(content) : EMPTY_BUFFER)
   const hash = yield* Task.wait(hasher.digest(bytes))
   const cid = createCID(encoder.code, hash)
 
   const block = { cid, bytes }
   const link = {
     cid,
-    contentByteLength: content.byteLength,
+    contentByteLength: content ? content.byteLength : 0,
     dagByteLength: bytes.byteLength,
   }
 
@@ -307,17 +296,17 @@ const encodeLeaf = function* ({ hasher, createCID }, { id, content }, encoder) {
  * @param {Queue.LinkedNode[]} nodes
  * @param {API.FileWriterConfig} config
  */
-const encodeNodes = (nodes, config) =>
-  nodes.map(node => encodeNode(config, node))
+const encodeBranches = (nodes, config) =>
+  nodes.map(node => encodeBranch(config, node))
 
 /**
  * @template Layout
- * @param {API.FileWriterConfig<unknown, Layout>} config
+ * @param {API.FileWriterConfig<Layout>} config
  * @param {Queue.LinkedNode} node
  * @param {UnixFS.Metadata} [metadata]
  * @returns {Task.Task<API.EncodedFile>}
  */
-export const encodeNode = function* (config, { id, links }, metadata) {
+export const encodeBranch = function* (config, { id, links }, metadata) {
   const bytes = config.fileEncoder.encode({
     type: UnixFS.NodeType.File,
     layout: "advanced",
@@ -357,7 +346,7 @@ export const writeBlock = function* (blockQueue, block) {
 
 /**
  *
- * @param {Uint8Array|Chunker.Buffer} buffer
+ * @param {Uint8Array|Chunker.Chunk} buffer
  * @returns
  */
 
@@ -365,3 +354,9 @@ const asUint8Array = buffer =>
   buffer instanceof Uint8Array
     ? buffer
     : buffer.copyTo(new Uint8Array(buffer.byteLength), 0)
+
+/**
+ * @param {Layout.Node} node
+ * @returns {node is Layout.Leaf}
+ */
+const isLeafNode = node => node.children == null
