@@ -227,6 +227,7 @@ export const close = state => {
         state.layout,
         chunks
       )
+
       const { root, nodes: rest } = state.config.fileLayout.close(
         layout,
         state.metadata

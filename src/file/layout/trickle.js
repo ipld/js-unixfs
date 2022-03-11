@@ -46,7 +46,7 @@ const EMTPY_LEAF_ID = 0
  * options: Options
  * leafCount: number
  * levelCutoffs: number[]
- * tail: TrickleNode|null
+ * tail: TrickleNode
  * lastID: number
  * }} Trickle
  *
@@ -56,8 +56,19 @@ const EMTPY_LEAF_ID = 0
 export const open = options => ({
   options,
   leafCount: 0,
-  levelCutoffs: [],
-  tail: null,
+  levelCutoffs: [options.maxDirectLeaves],
+  tail: new TrickleNode({
+    id: EMTPY_LEAF_ID + 2,
+    depth: 0,
+    directLeaves: [],
+    // this is a synthetic parent to hold the final-most-est digest CID
+    parent: new TrickleNode({
+      id: EMTPY_LEAF_ID + 1,
+      depth: -1,
+      directLeaves: [],
+      parent: null,
+    }),
+  }),
   lastID: EMTPY_LEAF_ID,
 })
 
@@ -88,112 +99,88 @@ export const write = (state, leaves) => {
  * @returns {Layout.WriteResult<Trickle>}
  */
 export const addLeaf = ({ nodes, leaves, layout }, leaf) => {
-  const { options, leafCount } = layout
-  let { lastID } = layout
-  if (layout.tail == null) {
-    // 1) We are just starting: fill in a new tail node with a synthetic parent,
-    // and other inits
-    const levelCutoffs = [options.maxDirectLeaves]
-    const tail = new TrickleNode({
-      id: ++lastID,
-      depth: 0,
-      directLeaves: [leaf],
-      // this is a synthetic parent to hold the final-most-est digest CID
-      parent: new TrickleNode({
-        id: ++lastID,
-        depth: -1,
-        directLeaves: [],
-        parent: null,
-      }),
-    })
+  // we are not yet at a node boundary just add a leaf to a tail
+  if (layout.leafCount % layout.options.maxDirectLeaves !== 0) {
+    return { nodes, leaves, layout: pushLeaf(layout, leaf) }
+  }
+  // if we got that far we are going to experience a node change
+  // let's find out where the puck would go next
+  else {
+    const { depth, levelCutoffs } = findNextLeafTarget(layout)
 
-    return {
-      layout: {
-        ...layout,
-        levelCutoffs,
-        tail,
-        leafCount: leafCount + 1,
-        lastID,
-      },
-      nodes,
-      leaves,
-    }
-
-    // 2) we are not yet at a node boundary
-  } else if (layout.leafCount % layout.options.maxDirectLeaves !== 0) {
-    const tail = new TrickleNode({
-      ...layout.tail,
-      directLeaves: [...layout.tail.directLeaves, leaf],
-    })
-    return {
-      layout: {
-        ...layout,
-        tail,
-        leafCount: leafCount + 1,
-        lastID,
-      },
-      nodes,
-      leaves,
-    }
-
-    // if we got that far we are going to experience a node change
-    // let's find out where the puck would go next
-  } else {
-    let nextNodeDepth = 0
-    let levelCutoffs = layout.levelCutoffs
-    // we have enough members to trigger the next descent-level-group:
-    // calculate and cache its size
-    if (layout.leafCount === levelCutoffs[levelCutoffs.length - 1]) {
-      levelCutoffs = [
-        ...levelCutoffs,
-        options.maxDirectLeaves *
-          Math.pow(options.maxSiblingSubgroups + 1, layout.levelCutoffs.length),
-      ]
-
-      nextNodeDepth = 1
-
-      //  otherwise just find where we'd land
-    } else {
-      let remainingLeaves = layout.leafCount
-      let level = levelCutoffs.length - 1
-      while (level >= 0) {
-        if (remainingLeaves >= levelCutoffs[level]) {
-          nextNodeDepth++
-        }
-        remainingLeaves %= levelCutoffs[level]
-        level--
-      }
-    }
-
-    // either backtrack "up the tree"
-    // or just reiterate current step, pushing the sibling into the parent's
-    // "direct leaves"
-    const next =
-      layout.tail.depth >= nextNodeDepth
+    // either backtrack "up the tree" or just reiterate current step, pushing
+    // the sibling into the parent's "direct leaves"
+    const result =
+      layout.tail.depth >= depth
         ? sealToLevel(
             { layout: { ...layout, levelCutoffs }, nodes, leaves },
-            nextNodeDepth
+            depth
           )
-        : { layout, nodes, leaves }
+        : { layout: { ...layout, levelCutoffs }, nodes, leaves }
+
+    let { lastID } = result.layout
 
     // now descend one step down for the final already-containing-a-leaf node
-    const tail = new TrickleNode({
-      id: ++lastID,
-      depth: nextNodeDepth,
-      directLeaves: [leaf],
-      parent: next.layout.tail,
-    })
 
     return {
-      ...next,
+      ...result,
       layout: {
-        ...next.layout,
-        tail,
-        levelCutoffs,
-        leafCount: leafCount + 1,
+        ...result.layout,
+        tail: new TrickleNode({
+          id: ++lastID,
+          depth: depth,
+          directLeaves: [leaf],
+          parent: result.layout.tail,
+        }),
+        leafCount: result.layout.leafCount + 1,
         lastID,
       },
     }
+  }
+}
+
+/**
+ * @param {Trickle} layout
+ */
+const findNextLeafTarget = ({ levelCutoffs, options, leafCount }) => {
+  // we have enough members to trigger the next descent-level-group:
+  // calculate and cache its size
+  if (leafCount === levelCutoffs[levelCutoffs.length - 1]) {
+    const cutoff =
+      options.maxDirectLeaves *
+      Math.pow(options.maxSiblingSubgroups + 1, levelCutoffs.length)
+    return {
+      depth: 1,
+      levelCutoffs: [...levelCutoffs, cutoff],
+    }
+  }
+  //  otherwise just find where we'd land
+  else {
+    let depth = 0
+    let remainingLeaves = leafCount
+    let level = levelCutoffs.length - 1
+    while (level >= 0) {
+      if (remainingLeaves >= levelCutoffs[level]) {
+        depth++
+      }
+      remainingLeaves %= levelCutoffs[level]
+      level--
+    }
+
+    return { depth, levelCutoffs }
+  }
+}
+/**
+ * @param {Trickle} layout
+ * @param {Layout.NodeID} leaf
+ * @returns {Trickle}
+ */
+
+const pushLeaf = (layout, leaf) => {
+  return {
+    ...layout,
+    tail: layout.tail.append(leaf),
+    leafCount: layout.leafCount + 1,
   }
 }
 
@@ -206,7 +193,10 @@ const sealToLevel = ({ nodes: input, leaves, layout }, depth) => {
   let { lastID } = layout
   const nodes = [...input]
 
-  let tail = new TrickleNode(/** @type {TrickleNode} */ (layout.tail))
+  let tail = new TrickleNode({
+    .../** @type {TrickleNode} */ (layout.tail),
+    id: ++lastID,
+  })
   while (tail.depth >= depth) {
     const parent = /** @type {TrickleNode} */ (tail.parent)
 
@@ -218,11 +208,12 @@ const sealToLevel = ({ nodes: input, leaves, layout }, depth) => {
 
     tail = new TrickleNode({
       ...parent,
+      id: ++lastID,
       directLeaves: [...parent.directLeaves, node.id],
     })
   }
 
-  return { layout: { ...layout, tail }, nodes, leaves }
+  return { layout: { ...layout, lastID, tail }, nodes, leaves }
 }
 
 /**
@@ -285,5 +276,17 @@ class TrickleNode {
   }
   get children() {
     return this.directLeaves
+  }
+
+  /**
+   *
+   * @param {Layout.NodeID} leaf
+   */
+
+  append(leaf) {
+    return new TrickleNode({
+      ...this,
+      directLeaves: [...this.directLeaves, leaf],
+    })
   }
 }

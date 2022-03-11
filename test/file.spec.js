@@ -1,8 +1,15 @@
 /* eslint-env mocha */
 
-import { expect, assert } from "chai"
-import { encodeUTF8, File, CID, hashrecur, collect } from "./util.js"
-import * as unixfs from "../src/lib.js"
+import { assert } from "chai"
+import {
+  encodeUTF8,
+  CID,
+  hashrecur,
+  collect,
+  writeFile,
+  encodeCar,
+} from "./util.js"
+import * as UnixFS from "../src/lib.js"
 import * as FileImporter from "../src/file.js"
 import * as Trickle from "../src/file/layout/trickle.js"
 import * as Balanced from "../src/file/layout/balanced.js"
@@ -10,7 +17,6 @@ import * as FixedSize from "../src/file/chunker/fixed.js"
 import * as Rabin from "../src/file/chunker/rabin.new.js"
 import * as API from "../src/file/api.js"
 import * as RawLeaf from "multiformats/codecs/raw"
-import * as UnixFS from "../src/unixfs.js"
 import { sha256 } from "multiformats/hashes/sha2"
 
 const CHUNK_SIZE = 262144
@@ -213,6 +219,40 @@ describe("test file", () => {
       ),
       contentByteLength: 524288,
       dagByteLength: 524738,
+    })
+  })
+
+  it("trickle with several levels deep", async function () {
+    this.timeout(30000)
+    const chunkSize = 128
+    const maxLeaves = 4
+    const leafCount = 42
+
+    const content = hashrecur({ byteLength: chunkSize * leafCount })
+
+    const { writer, ...importer } = FileImporter.createImporter(
+      {},
+      FileImporter.configure({
+        chunker: FixedSize.withMaxChunkSize(chunkSize),
+        fileLayout: Trickle.configure({ maxDirectLeaves: maxLeaves }),
+        fileChunkEncoder: FileImporter.UnixFSRawLeaf,
+      })
+    )
+
+    const collector = collect(importer.blocks)
+
+    for await (const slice of content) {
+      writer.write(slice)
+    }
+    const link = await writer.close()
+    const blocks = await collector
+
+    assert.deepEqual(link, {
+      cid: CID.parse(
+        "bafybeieyaff3xepdv5r56bnhgxbxpjy6pzvxqpc6abjtkk4f46ylwop5ga"
+      ),
+      contentByteLength: chunkSize * leafCount,
+      dagByteLength: 8411,
     })
   })
 })

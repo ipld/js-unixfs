@@ -2,6 +2,7 @@ import { File } from "@web-std/file"
 import { CID } from "multiformats"
 import fetch from "@web-std/fetch"
 import { sha256 } from "multiformats/hashes/sha2"
+import { CarWriter } from "@ipld/car"
 
 const utf8Encoder = new TextEncoder()
 
@@ -39,19 +40,80 @@ export async function* hashrecur({
 }
 
 /**
- * @param {ReadableStream<import('../src/file/api').Block>} blockQueue
+ * @typedef {import('../src/file/api').Block} Block
+ *
+ * @param {ReadableStream<Block>} blockQueue
+ * @param {Block[]} [blocks]
  */
-export const collect = async blockQueue => {
-  const blocks = []
-  const reader = blockQueue.getReader()
+export const collect = async (blockQueue, blocks = []) => {
+  for await (const block of iterate(blockQueue)) {
+    blocks.push(block)
+  }
+  return blocks
+}
+
+/**
+ * @template T
+ * @param {ReadableStream<T>} stream
+ */
+export const iterate = async function* (stream) {
+  const reader = stream.getReader()
   while (true) {
     const next = await reader.read()
     if (next.done) {
-      return blocks
+      return
     } else {
-      blocks.push(next.value)
+      yield next.value
     }
   }
+}
+
+/**
+ * @template T, O
+ * @param {AsyncIterable<T>} source
+ * @param {{write(value:T): unknown, close():O|Promise<O>}} writer
+ * @returns {Promise<O>}
+ */
+const pipe = async (source, writer) => {
+  for await (const item of source) {
+    writer.write(item)
+  }
+  return await writer.close()
+}
+
+/**
+ * @param {ReadableStream<Block>} blocks
+ */
+export const encodeCar = blocks => {
+  const { writer, out } = CarWriter.create([CID.parse("bafkqaaa")])
+  pipe(iterate(blocks), {
+    write: block =>
+      writer.put({
+        cid: /** @type {CID} */ (block.cid),
+        bytes: block.bytes,
+      }),
+    close: () => writer.close(),
+  })
+
+  return out
+}
+
+/**
+ * @param {string|URL} target
+ * @param {AsyncIterable<Uint8Array>} content
+ * @returns {Promise<void>}
+ */
+export const writeFile = async (target, content) => {
+  const path = "fs"
+  const { createWriteStream } = await import("fs")
+  const file = createWriteStream(target)
+  for await (const chunk of content) {
+    file.write(chunk)
+  }
+
+  return await new Promise((resolve, reject) =>
+    file.close(error => (error ? reject(error) : resolve(undefined)))
+  )
 }
 
 export { File, CID, fetch }
