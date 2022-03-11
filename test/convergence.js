@@ -2,8 +2,7 @@ import { assert } from "chai"
 import Matrix from "./dataset/convergence_rawdata.js"
 import * as FileImporter from "../src/file.js"
 import { parseConfig, unpackFile } from "./matrix.js"
-import { CID, collect, encodeCar, writeFile } from "./util.js"
-import { Readable } from "stream"
+import { CID, collect, iterate, encodeCar, writeFile } from "./util.js"
 
 /**
  *
@@ -15,31 +14,25 @@ const createTest = spec =>
    */
   async function test() {
     this.timeout(50000)
-    const config = await parseConfig(spec)
+    const { cid, ...config } = await parseConfig(spec)
     const { writer, ...importer } = FileImporter.createImporter({}, config)
     const source = await unpackFile(config.url)
 
-    const car = encodeCar(importer.blocks)
-    const file = writeFile("temp.car", car)
+    // const car = encodeCar(importer.blocks)
+    // const file = writeFile("temp.car", car)
+    const ready = collect(importer.blocks)
 
     // @ts-expect-error - see https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59057
     const stream = /** @type {ReadableStream<Uint8Array>} */ (source.stream())
-    const reader = stream.getReader()
-    while (true) {
-      const read = await reader.read()
-      if (read.done) {
-        const link = await writer.close()
-        // const cids = (await blocks).map(block => block.cid)
-        // console.log(cids.map(String).join("\n"))
-
-        await file
-        assert.deepEqual(toV1(link.cid), config.cid)
-
-        break
-      } else {
-        writer.write(read.value)
-      }
+    for await (const slice of iterate(stream)) {
+      writer.write(slice)
     }
+
+    const link = await writer.close()
+    await ready
+    // console.log((await ready).map(block => `${block.cid}`).join("\n"))
+
+    assert.deepEqual(toV1(link.cid), cid)
   }
 
 /**
@@ -63,14 +56,34 @@ const isInlineCIDTest = config => config.inlining > 0
 /**
  * @param {Config} config
  */
+const isMissingFile = config => config.source.endsWith("/rand_5MiB.zst")
+
+/**
+ * fzstd seems to fail on this file
+ * @param {Config} config
+ */
+const isProblematicFile = config =>
+  config.source.endsWith("/rlarge_repeat_5GiB.zst")
+/**
+ * @param {Config} config
+ */
+const hasCID = config => config.cid.length > 0
+
+/**
+ * @param {Config} config
+ */
 const isDisabledTest = config =>
-  isInlineCIDTest(config) || isBuzzhashTest(config) || isJSRabinTest(config)
+  isInlineCIDTest(config) ||
+  isBuzzhashTest(config) ||
+  isJSRabinTest(config) ||
+  isMissingFile(config) ||
+  hasCID(config) ||
+  isProblematicFile(config)
 
 /** @type {(log:string) => Set<string>} */
 const tesSet = log => new Set(log.trim().split("\n"))
 
 const only = tesSet(`
-ipfs add --chunker=size-262144 --trickle=true --raw-leaves=true --cid-version=1 ../testdata/large_repeat_1GiB.zst
 `)
 
 const timeouts = tesSet(`
@@ -81,17 +94,16 @@ ipfs --upgrade-cidv0-in-output=true add --chunker=rabin-128-65535-524288 --trick
 `)
 
 const missmatches = tesSet(`
-ipfs --upgrade-cidv0-in-output=true add --chunker=size-262144 --trickle=true --raw-leaves=false --cid-version=0 ../testdata/large_repeat_1GiB.zst
-ipfs add --chunker=size-262144 --trickle=true --raw-leaves=false --cid-version=1 ../testdata/large_repeat_1GiB.zst
-jsipfs add --chunker=size-262144 --trickle=true --raw-leaves=false --cid-version=1 ../testdata/large_repeat_1GiB.zst
-ipfs --upgrade-cidv0-in-output=true add --chunker=rabin --trickle=true --raw-leaves=false --cid-version=0 ../testdata/large_repeat_1GiB.zst
-ipfs add --chunker=rabin --trickle=true --raw-leaves=false --cid-version=1 ../testdata/large_repeat_1GiB.zst
-ipfs --upgrade-cidv0-in-output=true add --chunker=rabin-262141 --trickle=true --raw-leaves=false --cid-version=0 ../testdata/large_repeat_1GiB.zst
-ipfs add --chunker=rabin-262141 --trickle=true --raw-leaves=false --cid-version=1 ../testdata/large_repeat_1GiB.zst
-ipfs --upgrade-cidv0-in-output=true add --chunker=size-262144 --trickle=true --raw-leaves=true --cid-version=0 ../testdata/large_repeat_1GiB.zst
-ipfs add --chunker=size-262144 --trickle=true --raw-leaves=true --cid-version=1 ../testdata/large_repeat_1GiB.zst
-jsipfs add --chunker=size-262144 --trickle=true --raw-leaves=true --cid-version=1 ../testdata/large_repeat_1GiB.zst
-ipfs --upgrade-cidv0-in-output=true add --chunker=rabin --trickle=true --raw-leaves=true --cid-version=0 ../testdata/large_repeat_1GiB.zst
+ipfs --upgrade-cidv0-in-output=true add --chunker=size-262144 --trickle=false --raw-leaves=false --cid-version=0 ../testdata/repeat_0.04GiB_174.zst
+ipfs add --chunker=size-262144 --trickle=false --raw-leaves=false --cid-version=1 ../testdata/repeat_0.04GiB_174.zst
+jsipfs add --chunker=size-262144 --trickle=false --raw-leaves=false --cid-version=1 ../testdata/repeat_0.04GiB_174.zst
+ipfs --upgrade-cidv0-in-output=true add --chunker=size-262144 --trickle=false --raw-leaves=true --cid-version=0 ../testdata/repeat_0.04GiB_174.zst
+ipfs --upgrade-cidv0-in-output=true add --chunker=size-65535 --trickle=true --raw-leaves=false --cid-version=0 ../testdata/uicro_1B.zst
+ipfs add --chunker=size-65535 --trickle=true --raw-leaves=false --cid-version=1 ../testdata/uicro_1B.zst
+jsipfs add --chunker=size-65535 --trickle=true --raw-leaves=false --cid-version=1 ../testdata/uicro_1B.zst
+ipfs --upgrade-cidv0-in-output=true add --chunker=size-262144 --trickle=true --raw-leaves=false --cid-version=0 ../testdata/uicro_1B.zst
+jsipfs add --chunker=size-65535 --trickle=false --raw-leaves=false --cid-version=1 ../testdata/zero_0B.zst
+jsipfs add --chunker=size-65535 --trickle=true --raw-leaves=true --cid-version=1 ../testdata/zero_0B.zst
 `)
 
 describe("convergence tests", () => {
