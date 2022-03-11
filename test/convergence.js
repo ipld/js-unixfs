@@ -67,7 +67,7 @@ const isProblematicFile = config =>
 /**
  * @param {Config} config
  */
-const hasCID = config => config.cid.length > 0
+const testHasNoCID = config => config.cid.length === 0
 
 /**
  * @param {Config} config
@@ -77,14 +77,13 @@ const isDisabledTest = config =>
   isBuzzhashTest(config) ||
   isJSRabinTest(config) ||
   isMissingFile(config) ||
-  hasCID(config) ||
+  testHasNoCID(config) ||
   isProblematicFile(config)
 
 /** @type {(log:string) => Set<string>} */
 const tesSet = log => new Set(log.trim().split("\n"))
 
 const only = tesSet(`
-jsipfs add --chunker=size-65535 --trickle=false --raw-leaves=false --cid-version=1 ../testdata/zero_0B.zst
 `)
 
 const timeouts = tesSet(`
