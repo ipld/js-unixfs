@@ -2,38 +2,37 @@ import { assert } from "chai"
 import Matrix from "./dataset/convergence_rawdata.js"
 import * as FileImporter from "../src/file.js"
 import { parseConfig, unpackFile } from "./matrix.js"
-import { CID, collect } from "./util.js"
-import * as FS from "fs"
+import { CID, collect, encodeCar, writeFile } from "./util.js"
+import { Readable } from "stream"
 
 /**
  *
- * @param {import('./matrix').Input} input
+ * @param {import('./matrix').Input} spec
  */
-const createTest = input =>
+const createTest = spec =>
   /**
    * @this {{timeout(ms:number):void}}
    */
   async function test() {
     this.timeout(50000)
-    const config = await parseConfig(input)
+    const config = await parseConfig(spec)
     const { writer, ...importer } = FileImporter.createImporter({}, config)
-    const file = await unpackFile(config.url)
-    FS.writeFileSync(
-      new URL(config.url.href + ".unpacked"),
-      new Uint8Array(await file.arrayBuffer())
-    )
-    const blocks = collect(importer.blocks)
+    const source = await unpackFile(config.url)
+
+    const car = encodeCar(importer.blocks)
+    const file = writeFile("temp.car", car)
 
     // @ts-expect-error - see https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59057
-    const stream = /** @type {ReadableStream<Uint8Array>} */ (file.stream())
+    const stream = /** @type {ReadableStream<Uint8Array>} */ (source.stream())
     const reader = stream.getReader()
     while (true) {
       const read = await reader.read()
       if (read.done) {
         const link = await writer.close()
-        const cids = (await blocks).map(block => block.cid)
-        console.log(cids.map(String).join("\n"))
+        // const cids = (await blocks).map(block => block.cid)
+        // console.log(cids.map(String).join("\n"))
 
+        await file
         assert.deepEqual(toV1(link.cid), config.cid)
 
         break
