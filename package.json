@@ -1,19 +1,26 @@
 {
   "name": "@ipld/unixfs",
   "description": "An implementation of the UnixFS in JavaScript designed for use with multiformats",
-  "version": "0.0.0",
+  "version": "1.0.0-dev",
   "files": [
     "src",
+    "gen",
     "dist/src",
-    "dist/bundle*"
+    "dist/gen",
+    "dist/bundle*",
+    "unixfs.proto"
   ],
   "scripts": {
     "prepare:proto": "pbjs -t static-module -w es6 -r unixfs --force-number --no-verify --no-delimited --no-create --no-beautify --no-defaults --lint eslint-disable -o gen/unixfs.js ./unixfs.proto",
     "prepare:proto-types": "pbts -o gen/unixfs.ts gen/unixfs.js",
     "gen": "node ./scripts/gen.js",
     "gen:matrix": "node ./scripts/matrix.js",
-    "test:web": "playwright-test test/**/*.spec.js --cov && nyc report",
-    "test:node": "c8 --check-coverage --branches 100 --functions 100 --lines 100 mocha test/**/*.spec.js",
+    "gen:types": "tsc --build",
+    "prepare": "tsc --build",
+    "test:web": "playwright-test test/**/*.spec.js",
+    "test:web:coverage": "playwright-test test/**/*.spec.js --cov && nyc report",
+    "test:node": "mocha test/**/*.spec.js",
+    "test:node:coverage": "c8 --check-coverage --branches 100 --functions 100 --lines 100 mocha test/**/*.spec.js",
     "test": "mocha test/**/*.spec.js",
     "coverage": "c8 --reporter=html mocha test/test-*.js && npm_config_yes=true npx st -d coverage -p 8080",
     "typecheck": "tsc --build",
@@ -22,10 +29,9 @@
   "dependencies": {
     "@ipld/dag-pb": "^2.1.15",
     "@web-std/stream": "1.0.1",
-    "rabin-rs": "^2.1.0",
-    "rabin-wasm": "^0.1.5",
     "actor": "^2.3.0",
-    "protobufjs": "^6.11.2"
+    "protobufjs": "^6.11.2",
+    "rabin-rs": "^2.1.0"
   },
   "type": "module",
   "main": "src/lib.js",
@@ -44,21 +50,21 @@
     ]
   },
   "devDependencies": {
+    "@ipld/car": "^4.0.0",
     "@types/chai": "^4.3.0",
     "@types/mocha": "^9.1.0",
+    "@types/tsv": "^0.2.1",
+    "@web-std/fetch": "^4.0.0",
+    "@web-std/file": "^3.0.2",
     "c8": "^7.11.0",
     "chai": "^4.3.6",
+    "fzstd": "^0.0.4",
     "mocha": "^9.2.0",
     "multiformats": "^9.6.2",
     "nyc": "^15.1.0",
     "playwright-test": "^7.2.2",
-    "typescript": "^4.5.5",
-    "@web-std/file": "^3.0.2",
     "tsv": "^0.2.0",
-    "@types/tsv": "^0.2.1",
-    "fzstd": "^0.0.4",
-    "@web-std/fetch": "^4.0.0",
-    "@ipld/car": "^4.0.0"
+    "typescript": "^4.5.5"
   },
   "license": "(Apache-2.0 AND MIT)"
 }

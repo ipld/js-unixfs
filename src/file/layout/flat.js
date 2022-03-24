@@ -54,6 +54,7 @@ export const write = ({ lastID, ...layout }, chunks) => {
 export const close = ({ children }, metadata) => {
   return {
     root: { id: 0, children, metadata },
+    leaves: EMPTY,
     nodes: EMPTY,
   }
 }
