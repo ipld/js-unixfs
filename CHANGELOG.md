@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.0.2-dev](https://github.com/ipld/js-unixfs/compare/v1.0.1-dev...v1.0.2-dev) (2022-03-24)
+
+
+### Bug Fixes
+
+* skypack build by breaking import loop ([#15](https://github.com/ipld/js-unixfs/issues/15)) ([611401b](https://github.com/ipld/js-unixfs/commit/611401b467aad2db969b19e0dc84eeeefcfaa9d2))
+
 ### [1.0.1-dev](https://github.com/ipld/js-unixfs/compare/v1.0.0-dev...v1.0.1-dev) (2022-03-24)
 
 
