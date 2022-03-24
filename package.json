@@ -40,6 +40,34 @@
     ".": {
       "import": "./src/lib.js",
       "types": "./dist/src/lib.d.ts"
+    },
+    "./src/file.js": {
+      "import": "./src/file.js",
+      "types": "./dist/src/file.d.ts"
+    },
+    "./src/file/layout/trickle.js": {
+      "import": "./src/file/layout/trickle.js",
+      "types": "./dist/src/file/layout/trickle.d.ts"
+    },
+    "./src/file/layout/balanced.js": {
+      "import": "./src/file/layout/balanced.js",
+      "types": "./dist/src/file/layout/balanced.d.ts"
+    },
+    "./src/file/layout/queue.js": {
+      "import": "./src/file/layout/queue.js",
+      "types": "./dist/src/file/layout/queue.d.ts"
+    },
+    "./src/file/chunker/fixed.js": {
+      "import": "./src/file/chunker/fixed.js",
+      "types": "./dist/src/file/chunker/fixed.d.ts"
+    },
+    "./src/file/chunker/rabin.js": {
+      "import": "./src/file/chunker/rabin.js",
+      "types": "./dist/src/file/chunker/rabin.d.ts"
+    },
+    "./src/file/chunker/buffer.js": {
+      "import": "./src/file/chunker/buffer.js",
+      "types": "./dist/src/file/chunker/buffer.d.ts"
     }
   },
   "c8": {
