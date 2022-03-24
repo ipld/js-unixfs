@@ -6,7 +6,7 @@ import * as Rabin from "../src/file/chunker/rabin.js"
 import * as API from "../src/file/api.js"
 import { UnixFSLeaf, UnixFSRawLeaf } from "../src/file.js"
 import * as RawLeaf from "multiformats/codecs/raw"
-import * as UnixFS from "../src/unixfs.js"
+import * as UnixFS from "../src/lib.js"
 import { sha256 } from "multiformats/hashes/sha2"
 import * as FZSTD from "fzstd"
 

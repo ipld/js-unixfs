@@ -1,5 +1,5 @@
 import * as API from "./file/api.js"
-import * as UnixFS from "./unixfs.js"
+import * as UnixFS from "./lib.js"
 import * as Writer from "./file/writer.js"
 import * as Task from "actor"
 import { panic } from "./writer/util.js"
