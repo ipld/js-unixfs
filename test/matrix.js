@@ -2,7 +2,7 @@ import { CID, File, fetch } from "./util.js"
 import * as Trickle from "../src/file/layout/trickle.js"
 import * as Balanced from "../src/file/layout/balanced.js"
 import * as FixedSize from "../src/file/chunker/fixed.js"
-import * as Rabin from "../src/file/chunker/rabin.new.js"
+import * as Rabin from "../src/file/chunker/rabin.js"
 import * as API from "../src/file/api.js"
 import { UnixFSLeaf, UnixFSRawLeaf } from "../src/file.js"
 import * as RawLeaf from "multiformats/codecs/raw"
@@ -35,7 +35,7 @@ const base = new URL("./dataset/testdata/", import.meta.url)
  * fileChunkEncoder: API.FileChunkEncoder
  * smallFileEncoder: API.FileChunkEncoder
  * fileEncoder: API.FileEncoder
- * fileLayout: API.Layout
+ * fileLayout: API.LayoutEngine<unknown>
  * hasher: API.MultihashHasher
  * inlining: number
  * cid: CID
@@ -107,44 +107,6 @@ const parseChunker = input => {
     return Rabin.create()
   } else {
     throw new Error(`Unknown chunker ${input}`)
-  }
-}
-
-/**
- * @param {string} input
- */
-
-const parseCIDCreator = input => {
-  switch (JSON.parse(input)) {
-    case 0:
-      return CID.create.bind(CID, 0)
-    case 1:
-      return CID.createV1
-    default:
-      throw new RangeError(`Unsupported CID version ${input}`)
-  }
-}
-
-/**
- * @param {string} input
- * @returns {API.FileChunkEncoder}
- */
-const parseFileChunkEcoder = input => {
-  if (JSON.parse(input)) {
-    return RawLeaf
-  } else {
-    return UnixFSLeaf
-  }
-}
-
-/**
- * @param {string} input
- */
-const parseLayout = input => {
-  if (JSON.parse(input)) {
-    return Balanced
-  } else {
-    return Trickle
   }
 }
 

@@ -1,44 +1,216 @@
 import { Indexed } from "./indexed.js"
 
 /**
+ * @typedef {{
+ * readonly byteOffset: number
+ * readonly byteLength: number
+ * readonly segments: Uint8Array[]
+ * }} BufferSlice
+ */
+
+/** @typedef {BufferView} View */
+export const empty = () => new BufferView()
+
+/**
+ * @param {Uint8Array[]} segments
+ * @param {number} byteOffset
+ * @param {number} byteLength
+ */
+export const create = (
+  segments,
+  byteOffset = 0,
+  byteLength = totalByteLength(segments)
+) => new BufferView(segments, byteOffset, byteLength)
+
+/**
+ *
+ * @param {Uint8Array[]} segments
+ * @returns
+ */
+const totalByteLength = segments => {
+  let byteLength = 0
+  for (const segment of segments) {
+    byteLength += segment.byteLength
+  }
+  return byteLength
+}
+
+/**
+ * @param {BufferSlice} buffer
+ * @param {number} [startOffset]
+ * @param {number} [endOffset]
+ */
+export const slice = (
+  buffer,
+  startOffset = 0,
+  endOffset = buffer.byteLength
+) => {
+  const segments = []
+  const start = startOffset < 0 ? buffer.byteLength - startOffset : startOffset
+  const end = endOffset < 0 ? buffer.byteLength - endOffset : endOffset
+
+  // If start at 0 offset and end is past buffer range it is effectively
+  // as same buffer.
+  if (start === 0 && end >= buffer.byteLength) {
+    return buffer
+  }
+
+  // If range is not within the current buffer just create an empty slice.
+  if (start > end || start > buffer.byteLength || end <= 0) {
+    return empty()
+  }
+
+  let byteLength = 0
+  let offset = 0
+  for (const segment of buffer.segments) {
+    const nextOffset = offset + segment.byteLength
+    // Have not found a start yet
+    if (byteLength === 0) {
+      // If end offset is within the current segment we know start is also,
+      // because it preceeds the end & we had not found start yet.
+      // In such case we create a view with only single segment of bytes
+      // in the range.
+      if (end <= nextOffset) {
+        const range = segment.subarray(start - offset, end - offset)
+        segments.push(range)
+        byteLength = range.byteLength
+        break
+      }
+      // If start offeset falls with in current range (but not the end)
+      // we save matching buffer slice and update byteLength.
+      else if (start < nextOffset) {
+        const range =
+          start === offset ? segment : segment.subarray(start - offset)
+        segments.push(range)
+        byteLength = range.byteLength
+      }
+    }
+    // Otherwise we already started collecting matching segments and are looking
+    // for the end end of the slice. If it is with in the current range capture
+    // the segment and create a view.
+    else if (end <= nextOffset) {
+      const range =
+        end === nextOffset ? segment : segment.subarray(0, end - offset)
+      segments.push(range)
+      byteLength += range.byteLength
+      break
+    }
+    // If end is past current range we just save the segment and continue.
+    else {
+      segments.push(segment)
+      byteLength += segment.byteLength
+    }
+
+    offset = nextOffset
+  }
+
+  return new BufferView(segments, buffer.byteOffset + start, byteLength)
+}
+
+/**
+ * @param {BufferSlice} buffer
+ * @param {Uint8Array} part
+ */
+
+export const push = (buffer, part) => {
+  if (part.byteLength > 0) {
+    // We MUTATE here but that is ok because it is out of bound for the passed
+    // buffer view so there will be no visible side effects.
+    buffer.segments.push(part)
+    return new BufferView(
+      buffer.segments,
+      buffer.byteOffset,
+      buffer.byteLength + part.byteLength
+    )
+  } else {
+    return buffer
+  }
+}
+
+/**
+ * @param {BufferSlice} buffer
+ * @param {number} n
+ */
+export const get = (buffer, n) => {
+  if (n < buffer.byteLength) {
+    let offset = 0
+    for (const segment of buffer.segments) {
+      if (n < offset + segment.byteLength) {
+        return segment[n - offset]
+      } else {
+        offset += segment.byteLength
+      }
+    }
+  }
+
+  return undefined
+}
+
+/**
+ *
+ * @param {BufferView} buffer
+ * @param {Uint8Array} target
+ * @param {number} byteOffset
+ */
+export const copyTo = (buffer, target, byteOffset) => {
+  let offset = byteOffset
+  for (const segment of buffer.segments) {
+    target.set(segment, offset)
+    offset += segment.byteLength
+  }
+
+  return target
+}
+
+/**
+ *
+ * @param {BufferView} buffer
+ */
+export function* iterate(buffer) {
+  for (const part of buffer.segments) {
+    yield* part
+  }
+}
+
+/**
  * @extends {Indexed<number>}
  */
 class BufferView extends Indexed {
   /**
-   * @param {Uint8Array[]} parts
+   * @param {Uint8Array[]} segments
    * @param {number} byteOffset
    * @param {number} byteLength
    */
-  constructor(parts = [], byteOffset = 0, byteLength = 0) {
+  constructor(segments = [], byteOffset = 0, byteLength = 0) {
     super()
-    this.parts = parts
+    /** @hide */
+    this.segments = segments
+    /** @readonly */
     this.byteLength = byteLength
+    /** @readonly */
+    this.length = byteLength
+    /** @readonly */
     this.byteOffset = byteOffset
   }
 
-  get length() {
-    return this.byteLength
-  }
-  *[Symbol.iterator]() {
-    for (const part of this.parts) {
-      yield* part
-    }
+  [Symbol.iterator]() {
+    return iterate(this)
   }
 
   /**
-   * @param {number} start
-   * @param {number} end
+   * @param {number} [start]
+   * @param {number} [end]
    */
   slice(start, end) {
-    return slice(this, start, end)
+    return /** @type {BufferView} */ (slice(this, start, end))
   }
 
   /**
-   * @param {number} start
-   * @param {number} end
+   * @param {number} [start]
+   * @param {number} [end]
    */
   subarray(start, end) {
-    return slice(this, start, end)
+    return /** @type {BufferView} */ (slice(this, start, end))
   }
 
   /**
@@ -46,7 +218,7 @@ class BufferView extends Indexed {
    * @param {Uint8Array} bytes
    */
   push(bytes) {
-    return push(this, bytes)
+    return /** @type {BufferView} */ (push(this, bytes))
   }
 
   /**
@@ -62,137 +234,6 @@ class BufferView extends Indexed {
    * @param {number} offset
    */
   copyTo(target, offset) {
-    for (const part of this.parts) {
-      target.set(part, offset)
-      offset += part.byteLength
-    }
-    return target
+    return copyTo(this, target, offset)
   }
 }
-
-/** @typedef {BufferView} View */
-
-/**
- *
- * @param {BufferView} buffer
- * @param {Uint8Array} part
- * @returns {BufferView}
- */
-
-export const push = (buffer, part) => {
-  if (part.byteLength > 0) {
-    // We mutate array here but previous buffer is still a view over
-    // the same data.
-    buffer.parts.push(part)
-    return new BufferView(
-      buffer.parts,
-      buffer.byteOffset,
-      buffer.byteLength + part.byteLength
-    )
-  } else {
-    return buffer
-  }
-}
-
-/**
- * @param {BufferView} buffer
- * @param {number} n
- */
-export const get = (buffer, n) => {
-  let offset = 0
-  if (n > buffer.byteLength) {
-    return undefined
-  }
-
-  for (const part of buffer.parts) {
-    if (n < offset + part.byteLength) {
-      return part[n - offset]
-    } else {
-      offset += part.byteLength
-    }
-  }
-  return undefined
-}
-
-/**
- * @param {BufferView} buffer
- * @param {number} n
- * @returns {readonly [number, number]}
- */
-
-const cursor = ({ parts, length }, n) => {
-  if (n === 0) {
-    return HEAD
-  }
-
-  const count = parts.length
-  let offest = 0
-  let index = 0
-  while (index < count) {
-    const part = parts[index]
-    const nextOffset = offest + part.length
-    if (n < nextOffset || index === count - 1) {
-      break
-    }
-    offest = nextOffset
-    index++
-  }
-
-  return [index, n - offest]
-}
-
-const HEAD = /** @type {[number, number]} */ (Object.freeze([0, 0]))
-
-/**
- * @param {BufferView} buffer
- * @param {number} [startOffset]
- * @param {number} [endOffset]
- * @returns {BufferView}
- */
-export const slice = (
-  buffer,
-  startOffset = buffer.byteOffset,
-  endOffset = buffer.byteLength
-) => {
-  const parts = []
-  const start = startOffset < 0 ? buffer.byteLength - startOffset : startOffset
-  const end = endOffset < 0 ? buffer.byteLength - endOffset : endOffset
-
-  // Empty range
-  if (start > end || start > buffer.byteLength || end <= 0) {
-    return new BufferView()
-  }
-
-  let byteLength = 0
-  let offset = 0
-  for (const part of buffer.parts) {
-    const nextOffset = offset + part.byteLength
-    // Have not found a start yet
-    if (byteLength === 0) {
-      if (end <= nextOffset) {
-        const slice = part.subarray(start - offset, end - offset)
-        return new BufferView([slice], 0, slice.byteLength)
-      } else if (start < nextOffset) {
-        const slice = start === offset ? part : part.subarray(start - offset)
-        byteLength = slice.byteLength
-        parts.push(slice)
-      }
-    }
-    // If end offest is in this range
-    else if (end <= nextOffset) {
-      const slice = end === nextOffset ? part : part.subarray(0, end - offset)
-      byteLength += slice.byteLength
-      parts.push(slice)
-      return new BufferView(parts, 0, byteLength)
-    } else {
-      parts.push(part)
-      byteLength += part.byteLength
-    }
-
-    offset = nextOffset
-  }
-
-  throw new Error("This code should be unreachable")
-}
-
-export const empty = () => new BufferView()

@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-unused-vars
 import * as API from "./api.js"
 
 export const name = "fixed"

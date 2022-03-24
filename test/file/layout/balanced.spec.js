@@ -1,7 +1,7 @@
 /* eslint-env mocha */
 import { assert } from "chai"
 import * as Balanced from "../../../src/file/layout/balanced.js"
-import * as Slice from "../../../src/file/chunker/buffer2.js"
+import * as Slice from "../../../src/file/chunker/buffer.js"
 
 describe("balanced layout", () => {
   it("empty produces empty leaf node", () => {

@@ -11,15 +11,14 @@ import type {
 
 export * from "../writer/api.js"
 import * as ChunkerService from "./chunker.js"
-import * as LayoutService from "./layout.js"
 
 export type { Chunker, LayoutEngine, MultihashHasher, MultihashDigest, Block }
 
-export interface FileWriterService<S = unknown> extends FileWriterConfig<S> {
+export interface FileWriterService<Layout> extends FileWriterConfig<Layout> {
   blockQueue: BlockQueue
 }
 
-export interface FileWriterConfig<S = unknown> {
+export interface FileWriterConfig<Layout = unknown> {
   /**
    * Chunker which will be used to split file content into chunks.
    */
@@ -44,7 +43,7 @@ export interface FileWriterConfig<S = unknown> {
   /**
    * Builder that will be used to build file DAG from the leaf nodes.
    */
-  fileLayout: LayoutEngine<S>
+  fileLayout: LayoutEngine<Layout>
 
   /**
    * Hasher used to compute multihash for each block in the file.
@@ -128,34 +127,35 @@ export interface FileContent extends BlobContent {
   readonly name: string
 }
 
-// ??????????????
-
-export type FileState = OpenFile | ClosedFile | LinkedFile
+export type FileState<Layout = unknown> =
+  | OpenFile<Layout>
+  | ClosedFile<Layout>
+  | LinkedFile
 
 export interface FileView<State extends FileState = FileState> {
   state: State
 }
 
-export interface OpenFile {
+export interface OpenFile<Layout = unknown> {
   readonly type: "file"
   readonly status: "open"
   readonly metadata: UnixFS.Metadata
-  readonly service: FileWriterService
+  readonly service: FileWriterService<Layout>
 
   writing: boolean
 
-  chunker: ChunkerService.State
-  layout: LayoutService.State<unknown>
+  chunker: ChunkerService.Chunker
+  layout: Layout
 }
 
-export interface ClosedFile {
+export interface ClosedFile<Layout = unknown> {
   readonly type: "file"
   readonly status: "closed"
-  readonly service: FileWriterService
+  readonly service: FileWriterService<Layout>
   readonly metadata: UnixFS.Metadata
   writing: boolean
-  chunker: ChunkerService.State
-  layout: LayoutService.State<unknown>
+  chunker: ChunkerService.Chunker
+  layout: Layout
 }
 
 export interface LinkedFile {
