@@ -12,9 +12,9 @@
     "prepare:proto-types": "pbts -o gen/unixfs.ts gen/unixfs.js",
     "gen": "node ./scripts/gen.js",
     "gen:matrix": "node ./scripts/matrix.js",
-    "test:web": "playwright-test test/*.spec.js --cov && nyc report",
-    "test:node": "c8 --check-coverage --branches 100 --functions 100 --lines 100 mocha test/*.spec.js",
-    "test": "mocha test/*.spec.js",
+    "test:web": "playwright-test test/**/*.spec.js --cov && nyc report",
+    "test:node": "c8 --check-coverage --branches 100 --functions 100 --lines 100 mocha test/**/*.spec.js",
+    "test": "mocha test/**/*.spec.js",
     "coverage": "c8 --reporter=html mocha test/test-*.js && npm_config_yes=true npx st -d coverage -p 8080",
     "typecheck": "tsc --build",
     "test:convergence": "mocha test/convergence.js"

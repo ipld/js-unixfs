@@ -1,5 +1,6 @@
 import * as Layout from "./api.js"
 import * as Chunker from "../chunker/api.js"
+import { EMPTY } from "../../writer/util.js"
 
 export const name = "trickle"
 
@@ -12,34 +13,30 @@ export const name = "trickle"
  *
  * @type {Options}
  */
-export const options = {
+export const defaults = {
   maxSiblingSubgroups: 4,
   maxDirectLeaves: 174,
-  unixfsNulLeafCompat: false,
+  unixfsNulLeafCompat: true,
 }
 
 /**
  * @param {Partial<Options>} options
- * @returns {Layout.Layout<Options, Trickle>}
+ * @returns {Layout.LayoutEngine<Trickle>}
  */
 export const configure = ({
   maxSiblingSubgroups = 4,
   maxDirectLeaves = 174,
   unixfsNulLeafCompat = false,
 }) => ({
-  options: {
-    maxDirectLeaves,
-    maxSiblingSubgroups,
-    unixfsNulLeafCompat,
-  },
-  open,
+  open: () =>
+    open({
+      maxDirectLeaves,
+      maxSiblingSubgroups,
+      unixfsNulLeafCompat,
+    }),
   write,
   close,
 })
-
-// We reserve 0 as an ID for the empty leaf block as there is a special case
-// for them.
-const EMTPY_LEAF_ID = 0
 
 /**
  * @typedef {{
@@ -50,44 +47,39 @@ const EMTPY_LEAF_ID = 0
  * lastID: number
  * }} Trickle
  *
- * @param {Options} options
+ * @param {Options} [options]
  * @returns {Trickle}
  */
-export const open = options => ({
+export const open = (options = defaults) => ({
   options,
   leafCount: 0,
   levelCutoffs: [options.maxDirectLeaves],
   tail: new TrickleNode({
-    id: EMTPY_LEAF_ID + 2,
     depth: 0,
     directLeaves: [],
     // this is a synthetic parent to hold the final-most-est digest CID
     parent: new TrickleNode({
-      id: EMTPY_LEAF_ID + 1,
       depth: -1,
       directLeaves: [],
-      parent: null,
     }),
   }),
-  lastID: EMTPY_LEAF_ID,
+  lastID: 0,
 })
 
 /**
- * @param {Trickle} state
- * @param {Chunker.Buffer[]} leaves
+ * @param {Trickle} layout
+ * @param {Chunker.Chunk[]} chunks
  * @returns {Layout.WriteResult<Trickle>}
  */
-export const write = (state, leaves) => {
+export const write = (layout, chunks) => {
   /** @type {Layout.WriteResult<Trickle>} */
-  let result = { layout: { ...state }, nodes: [], leaves: [] }
-  for (const content of leaves) {
-    const leaf =
-      content.byteLength === 0
-        ? { id: EMTPY_LEAF_ID, content }
-        : { id: ++result.layout.lastID, content }
-
-    result.leaves.push(leaf)
-    result = addLeaf(result, leaf.id)
+  let result = { layout: { ...layout }, nodes: [], leaves: [] }
+  for (const chunk of chunks) {
+    if (chunk.byteLength > 0) {
+      const leaf = { id: ++result.layout.lastID, content: chunk }
+      result.leaves.push(leaf)
+      result = addLeaf(result, leaf.id)
+    }
   }
 
   return result
@@ -100,7 +92,10 @@ export const write = (state, leaves) => {
  */
 export const addLeaf = ({ nodes, leaves, layout }, leaf) => {
   // we are not yet at a node boundary just add a leaf to a tail
-  if (layout.leafCount % layout.options.maxDirectLeaves !== 0) {
+  if (
+    layout.leafCount === 0 ||
+    layout.leafCount % layout.options.maxDirectLeaves !== 0
+  ) {
     return { nodes, leaves, layout: pushLeaf(layout, leaf) }
   }
   // if we got that far we are going to experience a node change
@@ -127,7 +122,6 @@ export const addLeaf = ({ nodes, leaves, layout }, leaf) => {
       layout: {
         ...result.layout,
         tail: new TrickleNode({
-          id: ++lastID,
           depth: depth,
           directLeaves: [leaf],
           parent: result.layout.tail,
@@ -190,15 +184,12 @@ const pushLeaf = (layout, leaf) => {
  * @returns {Layout.WriteResult<Trickle>}
  */
 const sealToLevel = ({ nodes: input, leaves, layout }, depth) => {
-  let { lastID } = layout
+  depth = depth < 0 ? 0 : depth
   const nodes = [...input]
+  let { tail, lastID } = layout
 
-  let tail = new TrickleNode({
-    .../** @type {TrickleNode} */ (layout.tail),
-    id: ++lastID,
-  })
   while (tail.depth >= depth) {
-    const parent = /** @type {TrickleNode} */ (tail.parent)
+    const { parent } = tail
 
     const node = {
       id: ++lastID,
@@ -208,7 +199,6 @@ const sealToLevel = ({ nodes: input, leaves, layout }, depth) => {
 
     tail = new TrickleNode({
       ...parent,
-      id: ++lastID,
       directLeaves: [...parent.directLeaves, node.id],
     })
   }
@@ -222,57 +212,40 @@ const sealToLevel = ({ nodes: input, leaves, layout }, depth) => {
  * @returns {Layout.CloseResult}
  */
 export const close = (layout, metadata) => {
-  if (layout.tail === null) {
-    return {
-      nodes: [],
-      root: {
-        id: layout.lastID + 1,
-        children: [],
-      },
-    }
-
-    // special case to match go-ipfs on zero-length streams
-  } else if (
-    layout.options.unixfsNulLeafCompat &&
-    layout.leafCount === 1 &&
-    layout.tail.directLeaves[0] === EMTPY_LEAF_ID
-  ) {
+  // special case to match go-ipfs on zero-length streams
+  if (layout.options.unixfsNulLeafCompat && layout.leafCount === 0) {
     // convergence requires a pb-unixfs-file link/leaf regardless of how
     // the encoder is setup, go figure...
     const root = {
       id: layout.lastID + 1,
-      children: [],
+      metadata,
     }
 
-    return { root, nodes: [] }
+    return { root, nodes: EMPTY, leaves: EMPTY }
   } else {
     const { nodes } = sealToLevel({ layout, leaves: [], nodes: [] }, 0)
-    const root = /** @type {Layout.Branch} */ (nodes.pop())
-    root.metadata = metadata
+    const { id, children } = /** @type {Layout.Branch} */ (nodes.pop())
     return {
+      leaves: EMPTY,
       nodes,
-      root,
+      root: { id, children, metadata },
     }
   }
 }
 
-/**
- * @implements {Layout.Branch}
- */
 class TrickleNode {
   /**
    * @param {{
-   * id: number
    * depth: number
    * directLeaves: Layout.NodeID[]
-   * parent: TrickleNode | null
+   * parent?: TrickleNode
    * }} data
    */
-  constructor({ id, depth, directLeaves, parent }) {
-    this.id = id
+  constructor({ depth, directLeaves, parent }) {
     this.depth = depth
     this.directLeaves = directLeaves
-    this.parent = parent
+    /** @type {TrickleNode} */
+    this.parent = parent || this
   }
   get children() {
     return this.directLeaves

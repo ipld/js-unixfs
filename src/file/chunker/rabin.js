@@ -1,51 +1,89 @@
-// eslint-disable-next-line no-unused-vars
 import * as API from "./api.js"
-import * as RabinLib from "./rabin/rabin-wasm.js"
+import * as Rabin from "rabin-rs"
 
 const AVARAGE = 262144
 const WINDOW = 16
-const POLYNOM = 17437180132763653
+
+export const name = "rabin"
 
 /**
- * @typedef {object} Rabin
- * @property {number} min
- * @property {number} max
- * @property {number} bits
- * @property {number} window
- * @property {number} polynomial
- *
- * @typedef {object} RabinConfig
+ * @typedef {object} Config
  * @property {number} avg
  * @property {number} min
  * @property {number} max
  * @property {number} window
- * @property {number} polynomial
+ *
+ * @typedef {Rabin.Rabin} Context
  */
 
 /**
- * @param {Partial<RabinConfig>} config
- * @returns {Promise<API.StatefulChunker<RabinLib.Rabin>>}
+ *
+ * @returns {Config}
  */
-export const create = async ({
-  avg = AVARAGE,
-  min = avg / 3,
-  max = avg + avg / 2,
+export const defaults = () => configure({ avg: AVARAGE })
+
+/**
+ * @param {number} avg
+ * @returns {RabinConfig}
+ */
+
+/**
+ *
+ * @param {Partial<Config> & {avg: number}} config
+ * @returns
+ */
+export const configure = ({
+  avg,
+  min = (avg / 3) | 0,
+  max = (avg + avg / 2) | 0,
   window = WINDOW,
-  polynomial = POLYNOM,
-} = {}) => ({
-  type: "Stateful",
-  context: await RabinLib.create(
-    Math.floor(Math.log2(avg)),
-    min,
-    max,
-    window,
-    polynomial
+}) => ({
+  avg,
+  min,
+  max,
+  window,
+})
+
+/**
+ * @param {Config} config
+ * @returns {Promise<API.StatelessChunker<Context>>}
+ */
+export const create = async (config = defaults()) => ({
+  type: "Stateless",
+  context: await Rabin.create(
+    Math.floor(Math.log2(config.avg)),
+    config.min,
+    config.max,
+    config.window
   ),
+  name,
   cut,
 })
 
 /**
- * @param {RabinLib.Rabin} rabin
- * @param {Uint8Array} buffer
+ * @param {BigInt} polynom
+ * @param {Config} config
+ * @returns {Promise<API.StatelessChunker<Context>>}
  */
-export const cut = (rabin, buffer) => rabin.fingerprint(buffer)
+export const createWithPolynom = async (polynom, config = defaults()) => ({
+  type: "Stateless",
+  context: Object.assign(
+    await Rabin.createWithPolynom(
+      polynom,
+      Math.floor(Math.log2(config.avg)),
+      config.min,
+      config.max,
+      config.window
+    ),
+    config
+  ),
+  name,
+  cut,
+})
+
+/**
+ * @param {Context} rabin
+ * @param {API.Chunk} buffer
+ * @param {boolean} end
+ */
+export const cut = (rabin, buffer, end) => Rabin.cutBuffer(rabin, buffer, end)

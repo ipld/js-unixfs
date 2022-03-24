@@ -1,5 +1,5 @@
 /* eslint-env mocha */
-import { expect, assert } from "chai"
+import { assert } from "chai"
 import * as Queue from "../../../src/file/layout/queue.js"
 import * as UnixFS from "../../../src/unixfs.js"
 import { shuffle, createLink, createNode } from "./util.js"

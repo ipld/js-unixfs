@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-unused-vars
 import * as API from "./api.js"
 
 export const name = "fixed"
@@ -27,7 +26,7 @@ export const withMaxChunkSize = maxChunkSize => ({
 
 /**
  * @param {FixedSize} maxChunkSize
- * @param {API.Buffer} buffer
+ * @param {API.Chunk} buffer
  * @param {boolean} end
  * @returns {number[]}
  */

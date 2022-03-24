@@ -49,7 +49,7 @@ export const UnixFSRawLeaf = {
 /**
  * @template [Layout=unknown]
  * @param {UnixFS.Metadata} [metadata]
- * @param {API.FileWriterConfig<unknown, Layout>} config
+ * @param {API.FileWriterConfig<Layout>} config
  */
 export const createImporter = (metadata = {}, config = defaults()) => {
   const { reader, writer } = Channel.createBlockChannel()
@@ -63,7 +63,7 @@ export const createImporter = (metadata = {}, config = defaults()) => {
  * @template Layout
  * @param {UnixFS.Metadata} metadata
  * @param {API.BlockQueue} blockQueue
- * @param {API.FileWriterConfig<unknown, Layout>} config
+ * @param {API.FileWriterConfig<Layout>} config
  * @returns {FileWriterView<Layout>}
  */
 export const createFileWriter = (metadata, blockQueue, config) => {

@@ -104,15 +104,20 @@ export const encodeCar = blocks => {
  * @returns {Promise<void>}
  */
 export const writeFile = async (target, content) => {
-  const path = "fs"
-  const { createWriteStream } = await import("fs")
+  const fs = "fs"
+  const { createWriteStream } = await import(fs)
   const file = createWriteStream(target)
   for await (const chunk of content) {
     file.write(chunk)
   }
 
   return await new Promise((resolve, reject) =>
-    file.close(error => (error ? reject(error) : resolve(undefined)))
+    file.close(
+      /**
+       * @param {unknown} error
+       */
+      error => (error ? reject(error) : resolve(undefined))
+    )
   )
 }
 

@@ -14,7 +14,7 @@ import * as FileImporter from "../src/file.js"
 import * as Trickle from "../src/file/layout/trickle.js"
 import * as Balanced from "../src/file/layout/balanced.js"
 import * as FixedSize from "../src/file/chunker/fixed.js"
-import * as Rabin from "../src/file/chunker/rabin.new.js"
+import * as Rabin from "../src/file/chunker/rabin.js"
 import * as API from "../src/file/api.js"
 import * as RawLeaf from "multiformats/codecs/raw"
 import { sha256 } from "multiformats/hashes/sha2"
@@ -253,6 +253,23 @@ describe("test file", () => {
       ),
       contentByteLength: chunkSize * leafCount,
       dagByteLength: 8411,
+    })
+  })
+
+  it("write empty with defaults", async function () {
+    const { writer, ...importer } = FileImporter.createImporter()
+    const collector = collect(importer.blocks)
+
+    writer.write(new Uint8Array())
+    const link = await writer.close()
+    const blocks = await collector
+
+    assert.deepEqual(link, {
+      cid: CID.parse(
+        "bafybeif7ztnhq65lumvvtr4ekcwd2ifwgm3awq4zfr3srh462rwyinlb4y"
+      ),
+      contentByteLength: 0,
+      dagByteLength: 6,
     })
   })
 })
