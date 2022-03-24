@@ -10,7 +10,6 @@ export * as Layout from "./file/layout/api"
 
 import NodeType = Data.DataType
 
-export * from "./lib.js"
 export { NodeType }
 export type { IData }
 
