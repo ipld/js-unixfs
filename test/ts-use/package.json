@@ -1,0 +1,11 @@
+{
+  "name": "ts-check",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ipld/unixfs": "file:./../.."
+  },
+  "devDependencies": {
+    "typescript": "^4.6.3"
+  }
+}

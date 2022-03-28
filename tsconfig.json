@@ -104,5 +104,6 @@
     "gen"
   ],
   "exclude": [
+    "test/ts-use"
   ]
 }
