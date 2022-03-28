@@ -10,6 +10,11 @@
     "dist/bundle*",
     "unixfs.proto"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ipld/js-unixfs.git"
+  },
+  "homepage": "https://github.com/ipld/js-unixfs",
   "scripts": {
     "prepare:proto": "pbjs -t static-module -w es6 -r unixfs --force-number --no-verify --no-delimited --no-create --no-beautify --no-defaults --lint eslint-disable -o gen/unixfs.js ./unixfs.proto",
     "prepare:proto-types": "pbts -o gen/unixfs.ts gen/unixfs.js",
