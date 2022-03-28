@@ -1,0 +1,8 @@
+{
+  "name": "ts-check",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ipld/unixfs": "file:./../.."
+  }
+}

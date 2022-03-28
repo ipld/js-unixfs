@@ -35,39 +35,53 @@
   },
   "type": "module",
   "main": "src/lib.js",
-  "types": "dist/src/lib.d.ts",
+  "types": "./dist/src/lib.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/*"
+      ],
+      "dist/src/lib.d.ts": [
+        "dist/src/lib.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": {
-      "import": "./src/lib.js",
-      "types": "./dist/src/lib.d.ts"
+      "types": "./dist/src/lib.d.ts",
+      "import": "./src/lib.js"
+    },
+    "./src/lib.js": {
+      "types": "./dist/src/lib.d.ts",
+      "import": "./src/lib.js"
     },
     "./src/file.js": {
-      "import": "./src/file.js",
-      "types": "./dist/src/file.d.ts"
+      "types": "./dist/src/file.d.ts",
+      "import": "./src/file.js"
     },
     "./src/file/layout/trickle.js": {
-      "import": "./src/file/layout/trickle.js",
-      "types": "./dist/src/file/layout/trickle.d.ts"
+      "types": "./dist/src/file/layout/trickle.d.ts",
+      "import": "./src/file/layout/trickle.js"
     },
     "./src/file/layout/balanced.js": {
-      "import": "./src/file/layout/balanced.js",
-      "types": "./dist/src/file/layout/balanced.d.ts"
+      "types": "./dist/src/file/layout/balanced.d.ts",
+      "import": "./src/file/layout/balanced.js"
     },
     "./src/file/layout/queue.js": {
-      "import": "./src/file/layout/queue.js",
-      "types": "./dist/src/file/layout/queue.d.ts"
+      "types": "./dist/src/file/layout/queue.d.ts",
+      "import": "./src/file/layout/queue.js"
     },
     "./src/file/chunker/fixed.js": {
-      "import": "./src/file/chunker/fixed.js",
-      "types": "./dist/src/file/chunker/fixed.d.ts"
+      "types": "./dist/src/file/chunker/fixed.d.ts",
+      "import": "./src/file/chunker/fixed.js"
     },
     "./src/file/chunker/rabin.js": {
-      "import": "./src/file/chunker/rabin.js",
-      "types": "./dist/src/file/chunker/rabin.d.ts"
+      "types": "./dist/src/file/chunker/rabin.d.ts",
+      "import": "./src/file/chunker/rabin.js"
     },
     "./src/file/chunker/buffer.js": {
-      "import": "./src/file/chunker/buffer.js",
-      "types": "./dist/src/file/chunker/buffer.d.ts"
+      "types": "./dist/src/file/chunker/buffer.d.ts",
+      "import": "./src/file/chunker/buffer.js"
     }
   },
   "c8": {
