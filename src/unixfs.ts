@@ -1,7 +1,7 @@
 import type { MultihashDigest } from "multiformats/hashes/interface"
 import { Data, type IData } from "../gen/unixfs.js"
 export type { BlockEncoder } from "multiformats/codecs/interface"
-import type { BaseEncoder } from "multiformats/bases/interface"
+import type { MultibaseEncoder } from "multiformats/bases/interface"
 export type {
   MultihashHasher,
   MultihashDigest,
@@ -360,7 +360,7 @@ export interface CID<
   readonly multihash: MultihashDigest<A>
   readonly bytes: Uint8Array
 
-  toString(encoder?: BaseEncoder): string
+  toString<Prefix extends string>(encoder?: MultibaseEncoder<Prefix>): string
 }
 
 // @see https://github.com/ipld/js-car/blob/a53d5c77d30f998b45a534e20d0f174574c58cd5/api.ts#L5
