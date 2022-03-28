@@ -56,6 +56,9 @@ jobs:
 
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
+
+      - name: Install test package
+        uses: bahmutov/npm-install@v1
         with:
           working-directory: test/ts-use
           useLockFile: false
