@@ -1,7 +1,7 @@
 {
   "name": "@ipld/unixfs",
   "description": "An implementation of the UnixFS in JavaScript designed for use with multiformats",
-  "version": "1.0.2-dev",
+  "version": "1.0.3-dev",
   "files": [
     "src",
     "gen",

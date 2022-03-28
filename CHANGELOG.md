@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.0.3-dev](https://github.com/ipld/js-unixfs/compare/v1.0.2-dev...v1.0.3-dev) (2022-03-28)
+
+
+### Bug Fixes
+
+* fix types exports ([#19](https://github.com/ipld/js-unixfs/issues/19)) ([3a83eb3](https://github.com/ipld/js-unixfs/commit/3a83eb36745e64dc39672ba5bd40b24faedd77e4))
+
 ### [1.0.2-dev](https://github.com/ipld/js-unixfs/compare/v1.0.1-dev...v1.0.2-dev) (2022-03-24)
 
 
