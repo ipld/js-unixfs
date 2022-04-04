@@ -113,5 +113,5 @@
     "tsv": "^0.2.0",
     "typescript": "^4.5.5"
   },
-  "license": "(Apache-2.0 AND MIT)"
+  "license": "Apache-2.0 OR MIT"
 }
