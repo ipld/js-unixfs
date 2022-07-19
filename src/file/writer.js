@@ -1,7 +1,7 @@
 import * as Task from "actor"
 import * as API from "./api.js"
 import * as Layout from "./layout/api.js"
-import * as UnixFS from "../lib.js"
+import * as UnixFS from "../codec.js"
 import * as Channel from "../writer/channel.js"
 import * as Chunker from "./chunker.js"
 import { EMPTY_BUFFER, panic, unreachable } from "../writer/util.js"

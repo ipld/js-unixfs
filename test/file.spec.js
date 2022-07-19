@@ -9,7 +9,7 @@ import {
   writeFile,
   encodeCar,
 } from "./util.js"
-import * as UnixFS from "../src/lib.js"
+import * as UnixFS from "../src/codec.js"
 import * as FileImporter from "../src/file.js"
 import * as Trickle from "../src/file/layout/trickle.js"
 import * as Balanced from "../src/file/layout/balanced.js"

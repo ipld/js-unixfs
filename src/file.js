@@ -1,5 +1,5 @@
 import * as API from "./file/api.js"
-import * as UnixFS from "./lib.js"
+import * as UnixFS from "./codec.js"
 import * as Writer from "./file/writer.js"
 import * as Task from "actor"
 import { panic } from "./writer/util.js"
@@ -25,7 +25,6 @@ export const defaults = () => ({
 })
 
 /**
- *
  * @param {Partial<API.FileWriterConfig>} config
  * @returns {API.FileWriterConfig}
  */
@@ -49,13 +48,13 @@ export const UnixFSRawLeaf = {
 /**
  * @template [Layout=unknown]
  * @param {UnixFS.Metadata} [metadata]
- * @param {API.FileWriterConfig<Layout>} config
+ * @param {API.FileWriterConfig<Layout>} [config]
  */
 export const createImporter = (metadata = {}, config = defaults()) => {
   const { reader, writer } = Channel.createBlockChannel()
   return {
     blocks: reader,
-    writer: createFileWriter(metadata, writer, config),
+    writer: createWriter(metadata, writer, config),
   }
 }
 
@@ -64,17 +63,18 @@ export const createImporter = (metadata = {}, config = defaults()) => {
  * @param {UnixFS.Metadata} metadata
  * @param {API.BlockQueue} blockQueue
  * @param {API.FileWriterConfig<Layout>} config
- * @returns {FileWriterView<Layout>}
+ * @returns {API.FileWriter<Layout>}
  */
-export const createFileWriter = (metadata, blockQueue, config) => {
+export const createWriter = (metadata, blockQueue, config) => {
   const writer = Writer.init(metadata, blockQueue, config)
   return new FileWriterView(writer)
 }
 
 /**
  * @template T
- * @param {FileWriterView<T>} view
+ * @param {API.FileWriter<T>} view
  * @param {Uint8Array} bytes
+ * @return {Promise<API.FileWriter<T>>}
  */
 
 export const write = async (view, bytes) => {
@@ -84,7 +84,7 @@ export const write = async (view, bytes) => {
 
 /**
  * @template T
- * @param {FileWriterView<T>} view
+ * @param {API.FileWriter<T>} view
  */
 export const close = async view => {
   await perform(view, Task.send({ type: "close" }))
@@ -101,7 +101,7 @@ export const close = async view => {
 
 /**
  * @template T
- * @param {FileWriterView<T>} view
+ * @param {API.FileWriter<T>} view
  * @param {Task.Effect<Writer.Message>} effect
  */
 const perform = (view, effect) =>
@@ -115,6 +115,7 @@ const perform = (view, effect) =>
 
 /**
  * @template Layout
+ * @implements {API.FileWriter<Layout>}
  */
 class FileWriterView {
   /**
@@ -126,7 +127,7 @@ class FileWriterView {
   }
   /**
    * @param {Uint8Array} bytes
-   * @returns {Promise<FileWriterView<Layout>>}
+   * @returns {Promise<API.FileWriter<Layout>>}
    */
   write(bytes) {
     return write(this, bytes)

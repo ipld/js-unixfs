@@ -1,5 +1,5 @@
 /* eslint-env mocha */
-import * as unixfs from "../src/lib.js"
+import * as unixfs from "../src/codec.js"
 import { assert } from "chai"
 import * as blocks from "./fixtures.js"
 import { fetch } from "./util.js"

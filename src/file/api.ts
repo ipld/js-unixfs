@@ -8,11 +8,19 @@ import type {
   MultihashHasher,
   MultihashDigest,
 } from "../unixfs.js"
+import type { State } from "./writer.js"
 
 export * from "../writer/api.js"
 import * as ChunkerService from "./chunker.js"
 
-export type { Chunker, LayoutEngine, MultihashHasher, MultihashDigest, Block }
+export type {
+  Chunker,
+  LayoutEngine,
+  MultihashHasher,
+  MultihashDigest,
+  Block,
+  State,
+}
 
 export interface FileWriterService<Layout> extends FileWriterConfig<Layout> {
   blockQueue: BlockQueue
@@ -163,4 +171,10 @@ export interface LinkedFile {
   readonly status: "linked"
 
   state: UnixFS.FileLink
+}
+
+export interface FileWriter<T extends unknown = unknown> {
+  state: State<T>
+  write(bytes: Uint8Array): Promise<FileWriter<T>>
+  close(): Promise<UnixFS.FileLink>
 }
