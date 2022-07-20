@@ -86,9 +86,7 @@ const isDisabledTest = config =>
 /** @type {(log:string) => Set<string>} */
 const tesSet = log => new Set(log.trim().split("\n"))
 
-const only = tesSet(`
-ipfs add --chunker=size-65535 --trickle=true --raw-leaves=false --cid-version=1 ../testdata/uicro_1B.zst
-`)
+const only = tesSet(``)
 
 const timeouts = tesSet(`
 ipfs --upgrade-cidv0-in-output=true add --chunker=size-65535 --trickle=true --raw-leaves=false --cid-version=0 ../testdata/large_repeat_1GiB.zst
