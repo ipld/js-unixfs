@@ -2,7 +2,6 @@ import * as Task from "actor"
 import * as API from "./api.js"
 import * as Layout from "./layout/api.js"
 import * as UnixFS from "../codec.js"
-import * as Channel from "../writer/channel.js"
 import * as Chunker from "./chunker.js"
 import { EMPTY_BUFFER, panic, unreachable } from "../writer/util.js"
 import * as Queue from "./layout/queue.js"
@@ -13,7 +12,7 @@ import * as Queue from "./layout/queue.js"
  * readonly status: 'open'
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.FileWriterConfig<Layout>
- * readonly blockQueue: API.BlockQueue
+ * readonly writer: API.BlockWriter
  * chunker: Chunker.Chunker
  * layout: Layout
  * nodeQueue: Queue.Queue
@@ -25,7 +24,7 @@ import * as Queue from "./layout/queue.js"
  * readonly status: 'closed'
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.FileWriterConfig<Layout>
- * readonly blockQueue: API.BlockQueue
+ * readonly writer: API.BlockWriter
  * readonly rootID: Layout.NodeID
  * readonly end?: Task.Fork<void, never>
  * chunker?: null
@@ -39,7 +38,7 @@ import * as Queue from "./layout/queue.js"
  * readonly status: 'linked'
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.FileWriterConfig<Layout>
- * readonly blockQueue: API.BlockQueue
+ * readonly writer: API.BlockWriter
  * readonly link: Layout.Link
  * chunker?: null
  * layout?: null
@@ -93,17 +92,17 @@ export const update = (message, state) => {
 
 /**
  * @template Layout
+ * @param {API.BlockWriter} writer
  * @param {UnixFS.Metadata} metadata
- * @param {Channel.Queue<UnixFS.Block>} blockQueue
  * @param {API.FileWriterConfig} config
  * @returns {State<Layout>}
  */
-export const init = (metadata, blockQueue, config) => {
+export const init = (writer, metadata, config) => {
   return {
     status: "open",
     metadata,
     config,
-    blockQueue,
+    writer,
     chunker: Chunker.open({ chunker: config.chunker }),
     layout: config.fileLayout.open(),
     // Note: Writing in large slices e.g. 1GiB at a time creates large queues
@@ -192,7 +191,7 @@ export const link = (state, { id, link, block }) => {
     state: newState,
     effect: Task.listen({
       link: Task.effects(tasks),
-      block: writeBlock(state.blockQueue, block),
+      block: writeBlock(state.writer, block),
       end,
     }),
   }
@@ -332,16 +331,16 @@ export const encodeBranch = function* (config, { id, links }, metadata) {
 }
 
 /**
- * @param {API.BlockQueue} blockQueue
+ * @param {API.BlockWriter} writer
  * @param {UnixFS.Block} block
  * @returns {Task.Task<void, never>}
  */
 
-export const writeBlock = function* (blockQueue, block) {
-  if (blockQueue.desiredSize <= 0) {
-    yield* Task.wait(blockQueue.ready)
+export const writeBlock = function* (writer, block) {
+  if ((writer.desiredSize || 0) <= 0) {
+    yield* Task.wait(writer.ready)
   }
-  blockQueue.enqueue(block)
+  writer.write(block)
 }
 
 /**

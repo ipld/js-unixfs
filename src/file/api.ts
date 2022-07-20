@@ -1,4 +1,5 @@
 import type { Chunker } from "./chunker/api.js"
+import type { Writer } from "../writer/api.js"
 import type { LayoutEngine, NodeID } from "./layout/api.js"
 import * as UnixFS from "../unixfs.js"
 import type {
@@ -23,7 +24,7 @@ export type {
 }
 
 export interface FileWriterService<Layout> extends FileWriterConfig<Layout> {
-  blockQueue: BlockQueue
+  writer: BlockWriter
 }
 
 export interface FileWriterConfig<Layout = unknown> {
@@ -65,13 +66,7 @@ export interface FileWriterConfig<Layout = unknown> {
   createCID: CreateCID
 }
 
-export interface Queue<T> extends ReadableStreamController<T> {
-  readonly desiredSize: number
-
-  ready: Promise<void>
-}
-
-export interface BlockQueue extends Queue<Block> {}
+export interface BlockWriter extends Writer<Block> {}
 
 export type FileChunkEncoder =
   | BlockEncoder<PB, Uint8Array>

@@ -7,73 +7,134 @@ export const configure = File.configure
 export const defaults = File.defaults
 
 /**
- * @typedef {Map<string, UnixFS.DirectoryEntryLink>} State
+ * @template [Layout=unknown]
+ * @param {object} options
+ * @param {API.BlockWriter} options.writer
+ * @param {UnixFS.Metadata} [options.metadata]
+ * @param {API.FileWriterConfig<Layout>} [options.config]
+ * @param {boolean} [options.preventClose]
+ * @returns {API.DirectoryWriterView<Layout>}
  */
+export const create = ({
+  writer,
+  metadata = {},
+  config = defaults(),
+  preventClose = false,
+}) => new DirectoryWriter(writer, metadata, config, new Map(), preventClose)
+
+/**
+ * @template {API.State} Writer
+ * @param {Writer} writer
+ * @param {string} name
+ * @param {UnixFS.FileLink | UnixFS.DirectoryLink} link
+ * @param {API.WriteOptions} [options]
+ * @returns {Writer}
+ */
+export const write = (writer, name, link, { overwrite = false } = {}) => {
+  if (name.includes("/")) {
+    throw new Error(
+      `Directory entry name "${name}" contains forbidden '/' character`
+    )
+  }
+  if (!overwrite && writer.entries.has(name)) {
+    throw new Error(`Diretroy already contains entry with name "${name}"`)
+  } else {
+    const { cid, dagByteLength } = link
+    writer.entries.set(name, { name, cid, dagByteLength })
+    return writer
+  }
+}
+
+/**
+ * @template {API.State} Writer
+ * @param {Writer} writer
+ * @param {string} name
+ * @returns {Writer}
+ */
+export const remove = (writer, name) => {
+  writer.entries.delete(name)
+  return writer
+}
+
+/**
+ * @template Layout
+ * @param {API.State<Layout>} state
+ * @returns {Promise<UnixFS.DirectoryLink>}
+ */
+export const close = async (
+  { writer, config, entries, metadata },
+  preventClose = false
+) => {
+  const node = UnixFS.createFlatDirectory([...entries.values()], metadata)
+  const bytes = UnixFS.encodeDirectory(node)
+  const digest = await config.hasher.digest(bytes)
+  const cid = config.createCID(UnixFS.code, digest)
+  if (!preventClose) {
+    await writer.close()
+  }
+  return { cid, dagByteLength: bytes.byteLength }
+}
+
+/**
+ * @template L
+ * @template {API.State<L>} Writer
+ * @param {Writer} writer
+ * @returns {API.DirectoryWriterView<L>}
+ */
+export const fork = ({ writer, metadata, config, entries, preventClose }) =>
+  new DirectoryWriter(
+    writer,
+    metadata,
+    config,
+    new Map(entries.entries()),
+    preventClose
+  )
 
 /**
  * @template [Layout=unknown]
- * @param {API.BlockQueue} blockQueue
- * @param {UnixFS.Metadata} [metadata]
- * @param {API.FileWriterConfig<Layout>} [config]
- * @returns {API.DirectoryWriter}
+ * @implements {API.DirectoryWriterView<Layout>}
  */
-export const createWriter = (blockQueue, metadata = {}, config = defaults()) =>
-  new DirectoryWriterView(blockQueue, metadata, config)
-
-/**
- * @template [Layout=unknown]
- * @implements {API.DirectoryWriter}
- */
-class DirectoryWriterView {
+class DirectoryWriter {
   /**
-   * @param {API.BlockQueue} blockQueue
+   * @param {API.BlockWriter} writer
    * @param {UnixFS.Metadata} metadata
    * @param {API.FileWriterConfig<Layout>} config
+   * @param {Map<string, UnixFS.DirectoryEntryLink>} entries
+   * @param {boolean} preventClose
    */
-  constructor(blockQueue, metadata, config) {
-    this.blockQueue = blockQueue
+  constructor(writer, metadata, config, entries, preventClose) {
+    this.writer = writer
     this.metadata = metadata
     this.config = config
-    /** @type {State} */
-    this.state = new Map()
+    this.entries = entries
+    this.preventClose = preventClose
   }
 
   /**
-   * @param {API.DirectoryEntry} entry
+   * @param {string} name
+   * @param {UnixFS.FileLink | UnixFS.DirectoryLink} link
+   * @param {API.WriteOptions} [options]
    */
 
-  write({ name, link }) {
-    if (name.includes("/")) {
-      throw new Error(
-        `Directory entry name "${name}" contains forbidden '/' character`
-      )
-    }
-    if (this.state.has(name)) {
-      throw new Error(`Diretroy already contains entry with name "${name}"`)
-    } else {
-      const { cid, dagByteLength } = link
-      this.state.set(name, { name, cid, dagByteLength })
-      return this
-    }
+  write(name, link, options) {
+    return write(this, name, link, options)
+  }
+
+  /**
+   * @param {string} name
+   */
+  remove(name) {
+    return remove(this, name)
+  }
+
+  /**
+   * @returns {API.DirectoryWriterView<Layout>}
+   */
+  fork() {
+    return fork(this)
   }
 
   close() {
     return close(this)
   }
-}
-
-/**
- * @param {object} self
- * @param {State} self.state
- * @param {UnixFS.Metadata} self.metadata
- * @param {API.FileWriterConfig} self.config
- * @return {Promise<UnixFS.DirectoryLink>}
- */
-
-export const close = async ({ state, metadata, config }) => {
-  const node = UnixFS.createFlatDirectory([...state.values()], metadata)
-  const bytes = UnixFS.encodeDirectory(node)
-  const digest = await config.hasher.digest(bytes)
-  const cid = config.createCID(UnixFS.code, digest)
-  return { cid, dagByteLength: bytes.byteLength }
 }

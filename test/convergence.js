@@ -1,6 +1,6 @@
 import { assert } from "chai"
 import Matrix from "./dataset/convergence_rawdata.js"
-import * as FileImporter from "../src/file.js"
+import * as Lib from "../src/lib.js"
 import { parseConfig, unpackFile } from "./matrix.js"
 import { CID, collect, iterate, encodeCar, writeFile } from "./util.js"
 
@@ -15,23 +15,25 @@ const createTest = spec =>
   async function test() {
     this.timeout(50000)
     const { cid, ...config } = await parseConfig(spec)
-    const { writer, ...importer } = FileImporter.createImporter({}, config)
+    const { writer, blocks } = Lib.create(config)
     const source = await unpackFile(config.url)
 
     // await writeFile("fail.txt", iterate(source.stream()))
     // return
 
-    const car = encodeCar(importer.blocks)
+    const car = encodeCar(blocks)
     const ready = writeFile("expect.car", car)
     // const ready = collect(importer.blocks)
 
     // @ts-expect-error - see https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59057
     const stream = /** @type {ReadableStream<Uint8Array>} */ (source.stream())
+    const file = writer.createFileWriter()
     for await (const slice of iterate(stream)) {
-      writer.write(slice)
+      file.write(slice)
     }
 
-    const link = await writer.close()
+    const link = await file.close()
+    writer.close()
     await ready
     // console.log((await ready).map(block => `${block.cid}`).join("\n"))
 
@@ -86,9 +88,7 @@ const isDisabledTest = config =>
 /** @type {(log:string) => Set<string>} */
 const tesSet = log => new Set(log.trim().split("\n"))
 
-const only = tesSet(`
-ipfs add --chunker=size-65535 --trickle=true --raw-leaves=false --cid-version=1 ../testdata/uicro_1B.zst
-`)
+const only = tesSet(``)
 
 const timeouts = tesSet(`
 ipfs --upgrade-cidv0-in-output=true add --chunker=size-65535 --trickle=true --raw-leaves=false --cid-version=0 ../testdata/large_repeat_1GiB.zst

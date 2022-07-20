@@ -3,7 +3,6 @@ import * as UnixFS from "./codec.js"
 import * as Writer from "./file/writer.js"
 import * as Task from "actor"
 import { panic } from "./writer/util.js"
-import * as Channel from "./writer/channel.js"
 import * as FixedSize from "./file/chunker/fixed.js"
 import { sha256 } from "multiformats/hashes/sha2"
 import { CID } from "multiformats/cid"
@@ -46,28 +45,21 @@ export const UnixFSRawLeaf = {
 }
 
 /**
- * @template [Layout=unknown]
- * @param {UnixFS.Metadata} [metadata]
- * @param {API.FileWriterConfig<Layout>} [config]
- */
-export const createImporter = (metadata = {}, config = defaults()) => {
-  const { reader, writer } = Channel.createBlockChannel()
-  return {
-    blocks: reader,
-    writer: createWriter(metadata, writer, config),
-  }
-}
-
-/**
  * @template Layout
- * @param {UnixFS.Metadata} metadata
- * @param {API.BlockQueue} blockQueue
- * @param {API.FileWriterConfig<Layout>} config
+ * @param {object} options
+ * @param {API.BlockWriter} options.writer
+ * @param {UnixFS.Metadata} [options.metadata]
+ * @param {API.FileWriterConfig<Layout>} [options.config]
+ * @param {boolean} [options.preventClose]
  * @returns {API.FileWriter<Layout>}
  */
-export const createWriter = (metadata, blockQueue, config) => {
-  const writer = Writer.init(metadata, blockQueue, config)
-  return new FileWriterView(writer)
+export const create = ({
+  writer,
+  metadata = {},
+  config = defaults(),
+  preventClose = false,
+}) => {
+  return new FileWriterView(Writer.init(writer, metadata, config), preventClose)
 }
 
 /**
@@ -85,12 +77,15 @@ export const write = async (view, bytes) => {
 /**
  * @template T
  * @param {API.FileWriter<T>} view
+ * @param {boolean} preventClose
  */
-export const close = async view => {
+export const close = async (view, preventClose) => {
   await perform(view, Task.send({ type: "close" }))
   const { state } = view
   if (state.status === "linked") {
-    view.state.blockQueue.close()
+    if (!preventClose) {
+      await view.state.writer.close()
+    }
     return state.link
   } else {
     panic(
@@ -119,11 +114,12 @@ const perform = (view, effect) =>
  */
 class FileWriterView {
   /**
-   *
    * @param {Writer.State<Layout>} state
+   * @param {boolean} preventClose
    */
-  constructor(state) {
+  constructor(state, preventClose) {
     this.state = state
+    this.preventClose = preventClose
   }
   /**
    * @param {Uint8Array} bytes
@@ -136,6 +132,6 @@ class FileWriterView {
    * @returns {Promise<UnixFS.FileLink>}
    */
   close() {
-    return close(this)
+    return close(this, this.preventClose)
   }
 }
