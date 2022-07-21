@@ -1,9 +1,8 @@
 import * as Lib from "../src/lib.js"
 import { assert } from "chai"
-import { encodeUTF8, CID, hashrecur, collect } from "./util.js"
+import { encodeUTF8, CID, collect } from "./util.js"
 
-const CHUNK_SIZE = 262144
-describe("test file", () => {
+describe("test directory", () => {
   it("empty dir", async () => {
     const { blocks, writer } = Lib.create()
     const root = writer.createDirectoryWriter()
@@ -24,7 +23,7 @@ describe("test file", () => {
     )
   })
 
-  it.only("basic file in directory", async () => {
+  it("basic file in directory", async () => {
     const { blocks, writer } = Lib.create()
     const root = writer.createDirectoryWriter()
     const file = writer.createFileWriter()
