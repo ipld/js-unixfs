@@ -56,13 +56,13 @@
       "types": "./dist/src/lib.d.ts",
       "import": "./src/lib.js"
     },
-    "./src/lib.js": {
-      "types": "./dist/src/lib.d.ts",
-      "import": "./src/lib.js"
-    },
-    "./src/file.js": {
+    "./file": {
       "types": "./dist/src/file.d.ts",
       "import": "./src/file.js"
+    },
+    "./directory": {
+      "types": "./dist/src/directory.d.ts",
+      "import": "./src/directory.js"
     },
     "./src/file/layout/trickle.js": {
       "types": "./dist/src/file/layout/trickle.d.ts",

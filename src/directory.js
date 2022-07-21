@@ -69,6 +69,7 @@ export const close = async (
   const bytes = UnixFS.encodeDirectory(node)
   const digest = await config.hasher.digest(bytes)
   const cid = config.createCID(UnixFS.code, digest)
+  await writer.write({ cid, bytes })
   if (!preventClose) {
     await writer.close()
   }
