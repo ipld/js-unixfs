@@ -546,7 +546,7 @@ const contentByteLength = link => link.contentByteLength
  */
 const encodeNamedLink = ({ name, dagByteLength, cid }) => ({
   Name: name,
-  TSize: dagByteLength,
+  Tsize: dagByteLength,
   // @ts-ignore - @see https://github.com/multiformats/js-multiformats/pull/161
   Hash: cid,
 })
