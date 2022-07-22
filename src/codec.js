@@ -22,11 +22,15 @@ export const name = "UnixFS"
  */
 const encodePB = (data, links) => {
   Object(globalThis).debug && console.log({ data, links })
-  return PB.encode({
-    Data: Data.encode(data).finish(),
-    // We can cast to mutable array as we know no mutation occurs there
-    Links: /** @type {PB.PBLink[]} */ (links),
-  })
+  return PB.encode(
+    // We run through prepare as links need to be sorted by name which it will
+    // do.
+    PB.prepare({
+      Data: Data.encode(data).finish(),
+      // We can cast to mutable array as we know no mutation occurs there
+      Links: /** @type {PB.PBLink[]} */ (links),
+    })
+  )
 }
 
 /**
