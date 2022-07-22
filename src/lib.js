@@ -59,22 +59,30 @@ export const createFile = ({
   return Object.assign(file, { blocks: fs.blocks })
 }
 
+/**
+ * @template [Layout=unknown]
+ * @param {object} [options]
+ * @param {API.EncoderConfig<Layout>} [options.config]
+ * @param {UnixFS.Metadata} [options.metadata]
+ * @param {boolean} [options.preventClose]
+ * @returns
+ */
 export const createDirectory = ({
   config = File.defaults(),
   metadata = {},
   preventClose = false,
 } = {}) => {
-  const fs = create(config)
+  const { blocks, writable, readable } = create(config)
   const directory = Directory.create(
     {
-      writable: fs,
+      writable,
       config,
       preventClose,
     },
     metadata
   )
 
-  return Object.assign(directory, { blocks: fs.blocks })
+  return Object.assign(directory, { blocks, writable, readable })
 }
 
 /**
@@ -93,7 +101,6 @@ class FileSystemWriter {
 
     this.readable = readable
     this.config = config
-    this.preventClose = true
   }
 
   /** @type {API.WritableBlockStream} */
@@ -115,14 +122,10 @@ class FileSystemWriter {
    * @template [L=unknown]
    * @param {API.WriterConfig<L|Layout>} [config]
    */
-  createFileWriter({
-    config = this.config,
-    preventClose = this.preventClose,
-    metadata = {},
-  } = {}) {
+  createFileWriter({ config = this.config, metadata = {}, preventClose } = {}) {
     return File.create(
       {
-        writable: this,
+        writable: this.writable,
         config,
         preventClose,
       },
@@ -136,12 +139,12 @@ class FileSystemWriter {
    */
   createDirectoryWriter({
     config = this.config,
-    preventClose = this.preventClose,
+    preventClose,
     metadata = {},
   } = {}) {
     return Directory.create(
       {
-        writable: this,
+        writable: this.writable,
         config,
         preventClose,
       },

@@ -238,4 +238,201 @@ describe("test directory", () => {
       ]
     )
   })
+
+  it("throws on invalid filenames", async () => {
+    const fs = UnixFS.create()
+    const root = UnixFS.createDirectoryWriter(fs)
+    const hello = await importFile(fs, ["hello"])
+
+    assert.throws(
+      () => root.write("hello/world", hello),
+      /Directory entry name "hello\/world" contains forbidden "\/" character/
+    )
+    root.close()
+  })
+
+  it("can not change after close", async () => {
+    const fs = UnixFS.create()
+
+    const root = UnixFS.createDirectoryWriter(fs)
+
+    const hello = await importFile(fs, ["hello"])
+    assert.deepEqual(hello, {
+      cid: CID.parse(
+        "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
+      ),
+      contentByteLength: 5,
+      dagByteLength: 13,
+    })
+
+    const bye = await importFile(fs, ["bye"])
+    assert.deepEqual(bye, {
+      cid: CID.parse(
+        "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
+      ),
+      dagByteLength: 11,
+      contentByteLength: 3,
+    })
+
+    root.write("hello", hello)
+    assert.deepEqual(await root.close(), {
+      cid: CID.parse(
+        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
+      ),
+      dagByteLength: 66,
+    })
+
+    assert.throws(
+      () => root.write("bye", bye),
+      /Can not change written directory, but you can \.fork\(\) and make changes to it/
+    )
+
+    await fs.close()
+    const items = await collect(fs.readable)
+    assert.deepEqual(
+      items.map(item => item.cid.toString()),
+      [
+        "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
+        "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
+        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
+      ]
+    )
+  })
+
+  it("can fork and edit", async () => {
+    const fs = UnixFS.create()
+
+    const root = UnixFS.createDirectoryWriter(fs)
+
+    const hello = await importFile(fs, ["hello"])
+    assert.deepEqual(hello, {
+      cid: CID.parse(
+        "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
+      ),
+      contentByteLength: 5,
+      dagByteLength: 13,
+    })
+
+    const bye = await importFile(fs, ["bye"])
+    assert.deepEqual(bye, {
+      cid: CID.parse(
+        "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
+      ),
+      dagByteLength: 11,
+      contentByteLength: 3,
+    })
+
+    root.write("hello", hello)
+    assert.deepEqual(await root.close(), {
+      cid: CID.parse(
+        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
+      ),
+      dagByteLength: 66,
+    })
+
+    const fork = root.fork()
+    fork.write("bye", bye)
+    assert.deepEqual(await fork.close(), {
+      cid: CID.parse(
+        "bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44"
+      ),
+      dagByteLength: 124,
+    })
+
+    await fs.close()
+    const items = await collect(fs.readable)
+    assert.deepEqual(
+      items.map(item => item.cid.toString()),
+      [
+        "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
+        "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
+        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
+        "bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44",
+      ]
+    )
+  })
+
+  it("can autoclose", async () => {
+    const root = UnixFS.createDirectory()
+    const file = UnixFS.createFileWriter(root)
+    file.write(new TextEncoder().encode("hello"))
+    root.write("hello", await file.close())
+    assert.deepEqual(await root.close(), {
+      cid: CID.parse(
+        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
+      ),
+      dagByteLength: 66,
+    })
+
+    const output = []
+    for await (const block of root.blocks) {
+      output.push(block.cid.toString())
+    }
+
+    assert.deepEqual(output, [
+      "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
+      "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
+    ])
+  })
+
+  it("fork into other stream", async () => {
+    const fs = UnixFS.create()
+
+    const root = UnixFS.createDirectoryWriter(fs)
+
+    const hello = await importFile(fs, ["hello"])
+    assert.deepEqual(hello, {
+      cid: CID.parse(
+        "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
+      ),
+      contentByteLength: 5,
+      dagByteLength: 13,
+    })
+
+    const bye = await importFile(fs, ["bye"])
+    assert.deepEqual(bye, {
+      cid: CID.parse(
+        "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
+      ),
+      dagByteLength: 11,
+      contentByteLength: 3,
+    })
+
+    root.write("hello", hello)
+    assert.deepEqual(await root.close(), {
+      cid: CID.parse(
+        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
+      ),
+      dagByteLength: 66,
+    })
+
+    const patch = UnixFS.create()
+
+    const fork = root.fork(patch)
+    fork.write("bye", bye)
+    assert.deepEqual(await fork.close(), {
+      cid: CID.parse(
+        "bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44"
+      ),
+      dagByteLength: 124,
+    })
+
+    await fs.close()
+    const items = await collect(fs.readable)
+    assert.deepEqual(
+      items.map(item => item.cid.toString()),
+      [
+        "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
+        "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
+        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
+      ]
+    )
+
+    await patch.close()
+    const delta = await collect(patch.readable)
+    assert.deepEqual(
+      delta.map(item => item.cid.toString()),
+      ["bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44"]
+    )
+  })
 })

@@ -21,8 +21,8 @@ export const create = (
     metadata,
     config,
     new Map(),
-    true,
-    preventClose
+    false,
+    !preventClose
   )
 
 /**
@@ -37,7 +37,7 @@ export const write = (writer, name, link, { overwrite = false } = {}) => {
   const writable = asWritable(writer)
   if (name.includes("/")) {
     throw new Error(
-      `Directory entry name "${name}" contains forbidden '/' character`
+      `Directory entry name "${name}" contains forbidden "/" character`
     )
   }
   if (!overwrite && writable.entries.has(name)) {
@@ -66,7 +66,7 @@ export const remove = (writer, name) => {
  * @returns {Writer}
  */
 const asWritable = writer => {
-  if (writer.writable) {
+  if (!writer.closed) {
     return writer
   } else {
     throw new Error(
@@ -80,19 +80,19 @@ const asWritable = writer => {
  * @param {API.State<Layout>} state
  * @returns {Promise<UnixFS.DirectoryLink>}
  */
-export const close = async (state, preventClose = false) => {
+export const close = async (state, closeWriter = false) => {
   const { writer, config, entries, metadata } = asWritable(state)
-  state.writable = false
+  state.closed = true
   const links = [...entries.values()]
   const node = UnixFS.createFlatDirectory(links, metadata)
   const bytes = UnixFS.encodeDirectory(node)
   const digest = await config.hasher.digest(bytes)
   const cid = config.createCID(UnixFS.code, digest)
   await writer.write({ cid, bytes })
-  if (preventClose) {
-    writer.releaseLock()
-  } else {
+  if (closeWriter) {
     await writer.close()
+  } else {
+    writer.releaseLock()
   }
 
   return {
@@ -109,7 +109,7 @@ export const close = async (state, preventClose = false) => {
  * @returns {API.DirectoryWriterView<L>}
  */
 export const fork = (
-  { writer, metadata, config, entries, preventClose },
+  { writer, metadata, config, entries, closeWriter },
   writable
 ) =>
   new DirectoryWriter(
@@ -117,8 +117,8 @@ export const fork = (
     metadata,
     config,
     new Map(entries.entries()),
-    true,
-    preventClose
+    false,
+    closeWriter
   )
 
 /**
@@ -131,16 +131,16 @@ class DirectoryWriter {
    * @param {UnixFS.Metadata} metadata
    * @param {API.EncoderConfig<Layout>} config
    * @param {Map<string, UnixFS.DirectoryEntryLink>} entries
-   * @param {boolean} writable
-   * @param {boolean} preventClose
+   * @param {boolean} closed
+   * @param {boolean} closeWriter
    */
-  constructor(writer, metadata, config, entries, writable, preventClose) {
+  constructor(writer, metadata, config, entries, closed, closeWriter) {
     this.writer = writer
     this.metadata = metadata
     this.config = config
     this.entries = entries
-    this.preventClose = preventClose
-    this.writable = writable
+    this.closeWriter = closeWriter
+    this.closed = closed
   }
 
   /**
@@ -169,6 +169,6 @@ class DirectoryWriter {
   }
 
   close() {
-    return close(this, this.preventClose)
+    return close(this, this.closeWriter)
   }
 }

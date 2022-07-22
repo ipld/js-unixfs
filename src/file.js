@@ -57,7 +57,7 @@ export const create = (
 ) =>
   new FileWriterView(
     Writer.init(writable.getWriter(), metadata, configure(config)),
-    preventClose
+    !preventClose
   )
 
 /**
@@ -76,14 +76,14 @@ export const write = async (view, bytes) => {
  * @template T
  * @param {API.FileWriter<T>} view
  */
-export const close = async (view, preventClose = true) => {
+export const close = async (view, closeWriter = false) => {
   await perform(view, Task.send({ type: "close" }))
   const { state } = view
   if (state.status === "linked") {
-    if (preventClose) {
-      await view.state.writer.releaseLock()
-    } else {
+    if (closeWriter) {
       await view.state.writer.close()
+    } else {
+      await view.state.writer.releaseLock()
     }
     return state.link
   } else {
@@ -114,11 +114,11 @@ const perform = (view, effect) =>
 class FileWriterView {
   /**
    * @param {Writer.State<Layout>} state
-   * @param {boolean} preventClose
+   * @param {boolean} closeWriter
    */
-  constructor(state, preventClose) {
+  constructor(state, closeWriter) {
     this.state = state
-    this.preventClose = preventClose
+    this.closeWriter = closeWriter
   }
   /**
    * @param {Uint8Array} bytes
@@ -131,6 +131,6 @@ class FileWriterView {
    * @returns {Promise<UnixFS.FileLink>}
    */
   close() {
-    return close(this, this.preventClose)
+    return close(this, this.closeWriter)
   }
 }

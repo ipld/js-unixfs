@@ -12,34 +12,33 @@ export type {
 } from "../file/api.js"
 
 export interface DirectoryWriter {
-  // /**
-  //  * Adds new entry (either directory or a file) to this directory. Please note
-  //  * that it is API consumer responsibility to ensure that underlying entry
-  //  * blocks are written into the `BlockQueue` of this `DiretoryWriter` if so
-  //  * desired. To include blocks of the added entry you can use `createFileWriter`
-  //  * and `createDirectoryWriter` methods.
-  //  *
-  //  * ⚠️ Please note that call will throw an exception if the conflicting file
-  //  * name is used.
-  //  *
-  //  * @example
-  //  * ```
-  //  * import as UnixFS from "@ipld/dag-unixfs"
-  //  *
-  //  * const demo = async (writable) => {
-  //  *   const writer = UnixFS.fromWriter(writable.getWriter())
-  //  *   const directory = writer.createDirectory()
-  //  *   const file = writer.createFile()
-  //  *   file.write(new TextEncoder().encode('hello world'))
-  //  *   directory.write('hello.txt',  await file.close())
-  //  *   return await directory.close()
-  //  * })
-  //  *
-  //  * const { readable, writable } = new TransformStream()
-  //  * demo(writable)
-  //  * ```
-  //  */
-
+  /**
+   * Adds new entry (either directory or a file) to this directory. Please note
+   * that it is API consumer responsibility to ensure that underlying entry
+   * blocks are written into the `BlockQueue` of this `DiretoryWriter` if so
+   * desired. To include blocks of the added entry you can use `createFileWriter`
+   * and `createDirectoryWriter` methods.
+   *
+   * ⚠️ Please note that call will throw an exception if the conflicting file
+   * name is used.
+   *
+   * @example
+   * ```
+   * import as UnixFS from "@ipld/dag-unixfs"
+   *
+   * const demo = async (writable) => {
+   *   const writer = UnixFS.fromWriter(writable.getWriter())
+   *   const directory = writer.createDirectory()
+   *   const file = writer.createFile()
+   *   file.write(new TextEncoder().encode('hello world'))
+   *   directory.write('hello.txt',  await file.close())
+   *   return await directory.close()
+   * })
+   *
+   * const { readable, writable } = new TransformStream()
+   * demo(writable)
+   * ```
+   */
   write(
     name: string,
     entry: UnixFS.FileLink | UnixFS.DirectoryLink,
@@ -66,9 +65,9 @@ export interface State<Layout extends unknown = unknown> {
   readonly writer: BlockWriter
   readonly config: EncoderConfig<Layout>
 
-  readonly preventClose: boolean
+  readonly closeWriter: boolean
 
-  writable: boolean
+  closed: boolean
 }
 
 export interface DirectoryWriterView<Layout extends unknown = unknown>
