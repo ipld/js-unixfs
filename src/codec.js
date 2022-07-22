@@ -531,8 +531,16 @@ const decodeDirectoryLinks = links =>
  * @param {ReadonlyArray<UnixFS.FileLink>} links
  * @returns {number}
  */
-const cumulativeContentByteLength = links =>
+export const cumulativeContentByteLength = links =>
   links.reduce((size, link) => size + link.contentByteLength, 0)
+
+/**
+ * @param {Uint8Array} root
+ * @param {ReadonlyArray<UnixFS.DAGLink>} links
+ * @returns {number}
+ */
+export const cumulativeDagByteLength = (root, links) =>
+  links.reduce((size, link) => size + link.dagByteLength, root.byteLength)
 
 /**
  *

@@ -2,7 +2,7 @@ import * as UnixFS from "../src/lib.js"
 import { assert } from "chai"
 import { encodeUTF8, CID, collect } from "./util.js"
 
-describe.only("test directory", () => {
+describe("test directory", () => {
   it("empty dir", async () => {
     const { blocks, writer } = UnixFS.create()
     const root = writer.createDirectoryWriter()

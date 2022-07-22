@@ -317,14 +317,8 @@ export const encodeBranch = function* (config, { id, links }, metadata) {
   const block = { bytes, cid }
   const link = {
     cid,
-    contentByteLength: links.reduce(
-      (total, n) => total + n.contentByteLength,
-      0
-    ),
-    dagByteLength: links.reduce(
-      (total, n) => total + n.dagByteLength,
-      bytes.byteLength
-    ),
+    contentByteLength: UnixFS.cumulativeContentByteLength(links),
+    dagByteLength: UnixFS.cumulativeDagByteLength(bytes, links),
   }
 
   return { id, block, link }

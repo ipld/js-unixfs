@@ -77,10 +77,7 @@ export const close = async (
 
   return {
     cid,
-    dagByteLength: links.reduce(
-      (total, link) => total + link.dagByteLength,
-      bytes.byteLength
-    ),
+    dagByteLength: UnixFS.cumulativeDagByteLength(bytes, links),
   }
 }
 
