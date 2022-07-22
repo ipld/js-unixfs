@@ -65,7 +65,8 @@ export const close = async (
   { writer, config, entries, metadata },
   preventClose = false
 ) => {
-  const node = UnixFS.createFlatDirectory([...entries.values()], metadata)
+  const links = [...entries.values()]
+  const node = UnixFS.createFlatDirectory(links, metadata)
   const bytes = UnixFS.encodeDirectory(node)
   const digest = await config.hasher.digest(bytes)
   const cid = config.createCID(UnixFS.code, digest)
@@ -73,7 +74,14 @@ export const close = async (
   if (!preventClose) {
     await writer.close()
   }
-  return { cid, dagByteLength: bytes.byteLength }
+
+  return {
+    cid,
+    dagByteLength: links.reduce(
+      (total, link) => total + link.dagByteLength,
+      bytes.byteLength
+    ),
+  }
 }
 
 /**
