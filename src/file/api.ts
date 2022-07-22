@@ -23,11 +23,17 @@ export type {
   State,
 }
 
-export interface FileWriterService<Layout> extends FileWriterConfig<Layout> {
+export interface FileWriterService<Layout> extends EncoderConfig<Layout> {
   writer: BlockWriter
 }
 
-export interface FileWriterConfig<Layout = unknown> {
+export interface WriterConfig<Layout extends unknown = unknown> {
+  readonly config?: EncoderConfig<Layout>
+  readonly metadata?: UnixFS.Metadata
+  readonly preventClose?: boolean
+}
+
+export interface EncoderConfig<Layout extends unknown = unknown> {
   /**
    * Chunker which will be used to split file content into chunks.
    */
@@ -66,7 +72,18 @@ export interface FileWriterConfig<Layout = unknown> {
   createCID: CreateCID
 }
 
+export interface FileWriterConfig<Layout = unknown> {
+  writable: WritableBlockStream
+
+  preventClose?: boolean
+  config?: EncoderConfig<Layout>
+}
+
 export interface BlockWriter extends Writer<Block> {}
+
+export interface WritableBlockStream {
+  getWriter(): BlockWriter
+}
 
 export type FileChunkEncoder =
   | BlockEncoder<PB, Uint8Array>

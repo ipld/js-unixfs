@@ -33,44 +33,36 @@ You can encode a file as follows
 ```js
 import * as UnixFS from "@ipld/unixfs"
 
-// Create filesystem writer and a blocks stream from which created blocks
-// can be read.
-const { writer, blocks } = UnixFS.create()
+// Create a web `TransformStream` with additional filesystem specific interface
+// that allows encoding files and directories into `writable` end and reading
+// IPLD blocks from `readable` end.
+const archive = UnixFS.create()
 
-// Create file writer that can be used to encode file and write
-// content into it.
-const file = writer.createFileWriter()
-// Depending on runtime it may not be async iterable
-for await (const chunk of blob.stream()) {
-  file.write(chunk)
-}
-
-// Once all content is written close the file to obtait it's CID.
+// Create file writer that can be used to encode UnixFS file.
+const file = UnixFS.createFileWriter(fs)
+// write some content
+file.write(new TextEncoder().encode("hello world"))
+// Finalize file by closing it.
 const { cid } = await file.close()
 
-// Close the filesystem writer to end of the `block` stream. Now we can encode
-// all this into a car.
-encodeCAR({ roots: [cid], blocks })
+// close the archive to close underlying block stream.
+archive.close()
+
+// We could encode all this as car file
+encodeCAR({ roots: [cid], blocks: archive.blocks })
 ```
 
-If your runtime provides [`TransforStream`][] or a [`WritableStream`][] APIs you
-can create filesystem writer from the `WritableStream<Block>` as follows
+If your runtime provides [`TransforStream`][] or a [`WritableStream`][] APIs you can create filesystem writer from the `WritableStream<Block>` directly (this will allow you to control exactly how `readable`/`writable` streams deal with backpressuer)
 
 ```ts
 import * as UnixFS from "@ipld/unixfs"
 
 const writeFile = async (blob: Blob, writable: WritableStream<Block>) => {
-  const writer = writable.getWriter()
-  const fs = UnixFS.createWriter(writer)
-  const file = fs.createFileWriter()
-  // Depending on runtime it may not be async iterable
-  for await (const chunk of blob.stream()) {
-    file.write(chunk)
-  }
-
-  // Once all content is written close the file to obtait it's CID.
+  const fs = UnixFS.createWriter({ writable })
+  const file = UnixFS.createFileWriter(fs)
+  file.write(new TextEncoder().encode("hello world"))
   const { cid } = await file.close()
-  writer.releaseLock()
+  fs.close()
 
   return cid
 }
@@ -82,21 +74,21 @@ You can encode (non sharded) directories with provided API as well
 import * as UnixFS from "@ipld/unixfs"
 
 export const demo = async () => {
-  const { blocks, writer: fs } = UnixFS.create()
+  const fs = UnixFS.create()
 
   // write a file
-  const file = fs.createFileWriter()
+  const file = UnixFS.createFileWriter(file)
   file.write(new TextEncoder().encode("hello world"))
   const fileLink = await file.close()
 
   // create directory and add a file we encoded above
-  const dir = fs.createDirecotryWriter()
+  const dir = UnixFS.createDirecotryWriter(fs)
   dir.write("intro.md", fileLink)
   const dirLink = await dir.close()
 
   // now wrap above directory with another and also add the same file
   // there
-  const root = fs.createDirecotryWriter()
+  const root = UnixFS.createDirecotryWriter(fs)
   root.write("user", dirLink)
   root.write("hello.md", fileLink)
 
@@ -107,6 +99,7 @@ export const demo = async () => {
   // ./hello.md
   const rootLink = await root.close()
   // ...
+  fs.close()
 }
 ```
 
@@ -136,7 +129,7 @@ const demo = async blob => {
     hasher: sha256,
   })
 
-  const file = writer.createFileWriter({ metadata: { mode: 0644 } })
+  const file = UnixFS.createFileWriter(fs, { mode: 0644 })
   // ...
 }
 ```

@@ -11,7 +11,7 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'open'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.FileWriterConfig<Layout>
+ * readonly config: API.EncoderConfig<Layout>
  * readonly writer: API.BlockWriter
  * chunker: Chunker.Chunker
  * layout: Layout
@@ -23,7 +23,7 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'closed'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.FileWriterConfig<Layout>
+ * readonly config: API.EncoderConfig<Layout>
  * readonly writer: API.BlockWriter
  * readonly rootID: Layout.NodeID
  * readonly end?: Task.Fork<void, never>
@@ -37,7 +37,7 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'linked'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.FileWriterConfig<Layout>
+ * readonly config: API.EncoderConfig<Layout>
  * readonly writer: API.BlockWriter
  * readonly link: Layout.Link
  * chunker?: null
@@ -94,7 +94,7 @@ export const update = (message, state) => {
  * @template Layout
  * @param {API.BlockWriter} writer
  * @param {UnixFS.Metadata} metadata
- * @param {API.FileWriterConfig} config
+ * @param {API.EncoderConfig} config
  * @returns {State<Layout>}
  */
 export const init = (writer, metadata, config) => {
@@ -265,13 +265,13 @@ export const close = state => {
  * to index in the queue.
  *
  * @param {Layout.Leaf[]} leaves
- * @param {API.FileWriterConfig} config
+ * @param {API.EncoderConfig} config
  */
 const encodeLeaves = (leaves, config) =>
   leaves.map(leaf => encodeLeaf(config, leaf, config.fileChunkEncoder))
 
 /**
- * @param {API.FileWriterConfig} config
+ * @param {API.EncoderConfig} config
  * @param {Layout.Leaf} leaf
  * @param {API.FileChunkEncoder} encoder
  * @returns {Task.Task<API.EncodedFile, never>}
@@ -293,14 +293,14 @@ const encodeLeaf = function* ({ hasher, createCID }, { id, content }, encoder) {
 
 /**
  * @param {Queue.LinkedNode[]} nodes
- * @param {API.FileWriterConfig} config
+ * @param {API.EncoderConfig} config
  */
 const encodeBranches = (nodes, config) =>
   nodes.map(node => encodeBranch(config, node))
 
 /**
  * @template Layout
- * @param {API.FileWriterConfig<Layout>} config
+ * @param {API.EncoderConfig<Layout>} config
  * @param {Queue.LinkedNode} node
  * @param {UnixFS.Metadata} [metadata]
  * @returns {Task.Task<API.EncodedFile>}

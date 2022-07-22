@@ -7,7 +7,7 @@ import * as UnixFS from "./codec.js"
 
 export * from "./api.js"
 
-export { encode, decode, NodeType } from "./codec.js"
+export { encode, decode, NodeType, code } from "./codec.js"
 export {
   create as createFileWriter,
   configure,
@@ -19,120 +19,171 @@ export { create as createDirectoryWriter } from "./directory.js"
 
 /**
  * @template [Layout=unknown]
- * @param {API.Writer<UnixFS.Block>} writer
- * @param {API.FileWriterConfig<Layout>} [config]
+ * @param {API.FileSystemConfig<Layout>} config
  * @returns {API.FileSystemWriter<Layout>}
  */
-export const createWriter = (writer, config = File.defaults()) => {
-  return new UnixFSWriter(writer, config)
+export const createWriter = ({ writable, config = File.defaults() }) => {
+  return new FileSystemWriter({
+    readable: undefined,
+    writer: writable.getWriter(),
+    config,
+  })
 }
 
 /**
  * @template [Layout=unknown]
- * @param {API.FileWriterConfig<Layout>} [config]
+ * @param {API.EncoderConfig<Layout>} [config]
+ * @returns {API.FileSystem<Layout>}
  */
 export const create = (config = File.defaults()) => {
   const { readable, writer } = Channel.createBlockChannel()
-  return { blocks: readable, writer: createWriter(writer, config) }
+  return new FileSystem({ readable, writer, config })
 }
 
 export const createFile = ({
   config = File.defaults(),
   metadata = {},
+  preventClose = false,
 } = {}) => {
-  const { blocks, writer } = create(config)
-  const file = File.create({
-    writer: writer.writer,
-    metadata,
-    config,
-    preventClose: false,
-  })
+  const fs = create(config)
 
-  return { file, writer, blocks }
+  const file = File.create(
+    {
+      writable: fs,
+      config,
+      preventClose,
+    },
+    metadata
+  )
+
+  return Object.assign(file, { blocks: fs.blocks })
 }
 
 export const createDirectory = ({
   config = File.defaults(),
   metadata = {},
+  preventClose = false,
 } = {}) => {
-  const { blocks, writer } = create(config)
-  const directory = Directory.create({
-    writer: writer.writer,
-    metadata,
-    config,
-    preventClose: false,
-  })
+  const fs = create(config)
+  const directory = Directory.create(
+    {
+      writable: fs,
+      config,
+      preventClose,
+    },
+    metadata
+  )
 
-  return { directory, writer, blocks }
+  return Object.assign(directory, { blocks: fs.blocks })
 }
 
 /**
+ * @template {ReadableStream<UnixFS.Block>|undefined} Readable
  * @template [Layout=unknown]
- * @implements {API.BlockWriter}
- * @implements {API.FileSystemWriter<Layout>}
  */
-class UnixFSWriter {
+class FileSystemWriter {
   /**
-   * @param {Channel.Writer<UnixFS.Block>} writer
-   * @param {API.FileWriterConfig<Layout>} config
+   * @param {object} options
+   * @param {Readable} options.readable
+   * @param {Channel.Writer<UnixFS.Block>} options.writer
+   * @param {API.EncoderConfig<Layout>} options.config
    */
-  constructor(writer, config) {
+  constructor({ readable, writer, config }) {
+    this.writer = writer
+
+    this.readable = readable
     this.config = config
     this.preventClose = true
-    this.writer = writer
   }
 
-  get desiredSize() {
-    return this.writer.desiredSize
+  /** @type {API.WritableBlockStream} */
+  get writable() {
+    return this
   }
 
-  get ready() {
-    return this.writer.ready
+  // Currently `getWriter` / `releaseLock` methods mimic `WritableStream` /
+  // `WritableStreamDefaultWriter` APIs that allow multiple writers. Current
+  // implementation will not allow writers across (worker) threads but support
+  // for that could be added in the future e.g. `getWriter()` could create new
+  // `TransformStream` and pipe blocks from `ReadableStream` into `this.writer`.
+  getWriter() {
+    return this.writer
   }
+  releaseLock() {}
 
   /**
-   * @param {UnixFS.Block} block
+   * @template [L=unknown]
+   * @param {API.WriterConfig<L|Layout>} [config]
    */
-  write(block) {
-    return this.writer.write(block)
-  }
-
-  /**
-   * @param {Error} reason
-   */
-  abort(reason) {
-    return this.writer.abort(reason)
+  createFileWriter({
+    config = this.config,
+    preventClose = this.preventClose,
+    metadata = {},
+  } = {}) {
+    return File.create(
+      {
+        writable: this,
+        config,
+        preventClose,
+      },
+      metadata
+    )
   }
 
   /**
    * @template [L=unknown]
-   * @param {UnixFS.Metadata} [metadata]
-   * @param {API.FileWriterConfig<L|Layout>} [config]
+   * @param {API.WriterConfig<L|Layout>} [config]
    */
-  createFileWriter(metadata = {}, config = this.config) {
-    return File.create({
-      writer: this.writer,
-      metadata,
-      config,
-      preventClose: true,
-    })
-  }
-
-  /**
-   * @template [L=unknown]
-   * @param {UnixFS.Metadata} [metadata]
-   * @param {API.FileWriterConfig<L|Layout>} [config]
-   */
-  createDirectoryWriter(metadata = {}, config = this.config) {
-    return Directory.create({
-      writer: this.writer,
-      metadata,
-      config,
-      preventClose: true,
-    })
+  createDirectoryWriter({
+    config = this.config,
+    preventClose = this.preventClose,
+    metadata = {},
+  } = {}) {
+    return Directory.create(
+      {
+        writable: this,
+        config,
+        preventClose,
+      },
+      metadata
+    )
   }
 
   async close() {
     await this.writer.close()
+  }
+}
+
+/**
+ * @template [Layout=unknown]
+ * @extends {FileSystemWriter<ReadableStream<UnixFS.Block>, Layout>}
+ * @implements {API.FileSystem<Layout>}
+ */
+class FileSystem extends FileSystemWriter {
+  /**
+   * @type {AsyncIterableIterator<UnixFS.Block>}
+   */
+  get blocks() {
+    return blocks(this)
+  }
+}
+
+/**
+ * @param {API.FileSystem} fs
+ */
+
+export const blocks = async function* ({ readable }) {
+  const reader = readable.getReader()
+  try {
+    while (true) {
+      const next = await reader.read()
+      if (next.done) {
+        break
+      } else {
+        yield next.value
+      }
+    }
+  } finally {
+    reader.releaseLock()
   }
 }

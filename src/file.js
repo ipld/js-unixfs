@@ -11,7 +11,7 @@ import * as Balanced from "./file/layout/balanced.js"
 export * from "./file/api.js"
 
 /**
- * @returns {API.FileWriterConfig}
+ * @returns {API.EncoderConfig}
  */
 export const defaults = () => ({
   chunker: FixedSize,
@@ -24,8 +24,9 @@ export const defaults = () => ({
 })
 
 /**
- * @param {Partial<API.FileWriterConfig>} config
- * @returns {API.FileWriterConfig}
+ * @template {unknown} Layout
+ * @param {Partial<API.EncoderConfig<Layout>>} config
+ * @returns {API.EncoderConfig<Layout>}
  */
 export const configure = config => ({
   ...defaults(),
@@ -46,21 +47,18 @@ export const UnixFSRawLeaf = {
 
 /**
  * @template Layout
- * @param {object} options
- * @param {API.BlockWriter} options.writer
- * @param {UnixFS.Metadata} [options.metadata]
- * @param {API.FileWriterConfig<Layout>} [options.config]
- * @param {boolean} [options.preventClose]
+ * @param {API.FileWriterConfig<Layout>} options
+ * @param {UnixFS.Metadata} [metadata]
  * @returns {API.FileWriter<Layout>}
  */
-export const create = ({
-  writer,
-  metadata = {},
-  config = defaults(),
-  preventClose = false,
-}) => {
-  return new FileWriterView(Writer.init(writer, metadata, config), preventClose)
-}
+export const create = (
+  { writable, preventClose = true, config = defaults() },
+  metadata = {}
+) =>
+  new FileWriterView(
+    Writer.init(writable.getWriter(), metadata, configure(config)),
+    preventClose
+  )
 
 /**
  * @template T
@@ -77,13 +75,14 @@ export const write = async (view, bytes) => {
 /**
  * @template T
  * @param {API.FileWriter<T>} view
- * @param {boolean} preventClose
  */
-export const close = async (view, preventClose) => {
+export const close = async (view, preventClose = true) => {
   await perform(view, Task.send({ type: "close" }))
   const { state } = view
   if (state.status === "linked") {
-    if (!preventClose) {
+    if (preventClose) {
+      await view.state.writer.releaseLock()
+    } else {
       await view.state.writer.close()
     }
     return state.link

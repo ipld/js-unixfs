@@ -2,8 +2,7 @@
 
 import { assert } from "chai"
 import { encodeUTF8, CID, hashrecur, collect } from "./util.js"
-import * as UnixFS from "../src/codec.js"
-import * as Lib from "../src/lib.js"
+import * as UnixFS from "../src/lib.js"
 import * as Trickle from "../src/file/layout/trickle.js"
 import * as Balanced from "../src/file/layout/balanced.js"
 import * as FixedSize from "../src/file/chunker/fixed.js"
@@ -17,11 +16,11 @@ describe("test file", () => {
     this.timeout(30000)
     const content = encodeUTF8("this file does not have much content\n")
 
-    const { writer, blocks } = Lib.create()
-    const file = writer.createFileWriter()
+    const fs = UnixFS.create()
+    const file = UnixFS.createFileWriter(fs)
     await file.write(content)
     const link = await file.close()
-    writer.close()
+    fs.close()
 
     assert.equal(link.contentByteLength, 37)
     assert.equal(link.dagByteLength, 45)
@@ -30,8 +29,8 @@ describe("test file", () => {
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
     )
 
-    const reader = blocks.getReader()
-    const read = await reader.read()
+    const { blocks } = fs
+    const read = await blocks.next()
     if (read.done) {
       assert.fail("expected to get a block")
     }
@@ -42,13 +41,13 @@ describe("test file", () => {
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
     )
 
-    const end = await reader.read()
+    const end = await blocks.next()
     assert.deepEqual(end, { done: true, value: undefined })
   })
 
   it("splits into 3 chunks", async function () {
-    const { writer, blocks } = Lib.create()
-    const file = writer.createFileWriter()
+    const fs = UnixFS.create()
+    const file = UnixFS.createFileWriter(fs)
     file.write(new Uint8Array(CHUNK_SIZE).fill(1))
     file.write(new Uint8Array(CHUNK_SIZE).fill(2))
     file.write(new Uint8Array(CHUNK_SIZE).fill(3))
@@ -63,8 +62,8 @@ describe("test file", () => {
       ),
     })
 
-    const reader = blocks.getReader()
-    const r1 = await reader.read()
+    const { blocks } = fs
+    const r1 = await blocks.next()
     if (r1.done) {
       assert.fail("expected to get a block")
     }
@@ -74,7 +73,7 @@ describe("test file", () => {
       CID.parse("bafybeihhsdoupgd3fnl3e3367ymsanmikafpllldsdt37jzyoh6nuatowe")
     )
 
-    const r2 = await reader.read()
+    const r2 = await blocks.next()
     if (r2.done) {
       assert.fail("expected to get a block")
     }
@@ -83,7 +82,7 @@ describe("test file", () => {
       CID.parse("bafybeief3dmadxfymhhhrflqytqmlhlz47w6glaxvyzmm6s6tpfb6izzee")
     )
 
-    const r3 = await reader.read()
+    const r3 = await blocks.next()
     if (r3.done) {
       assert.fail("expected to get a block")
     }
@@ -92,21 +91,21 @@ describe("test file", () => {
       CID.parse("bafybeihznihf5g5ibdyoawn7uu3inlyqrxjv63lt6lop6h3w6rzwrp67a4")
     )
 
-    await writer.close()
+    await fs.close()
   })
 
   it("--chunker=size-65535 --trickle=false --raw-leaves=false --cid-version=1", async () => {
     const chunkSize = 65535
-    const { writer } = Lib.create({
+    const fs = UnixFS.create({
       chunker: FixedSize.withMaxChunkSize(chunkSize),
-      fileChunkEncoder: Lib.UnixFSLeaf,
-      smallFileEncoder: Lib.UnixFSLeaf,
+      fileChunkEncoder: UnixFS.UnixFSLeaf,
+      smallFileEncoder: UnixFS.UnixFSLeaf,
       fileLayout: Balanced,
       createCID: CID.createV1,
       hasher: sha256,
       fileEncoder: UnixFS,
     })
-    const file = writer.createFileWriter()
+    const file = UnixFS.createFileWriter(fs)
 
     const size = Math.round(chunkSize * 2.2)
     const FRAME = Math.round(size / 10)
@@ -127,7 +126,7 @@ describe("test file", () => {
       dagByteLength: 144372,
     })
 
-    await writer.close()
+    await fs.close()
   })
 
   it("chunks with rabin chunker", async function () {
@@ -137,15 +136,15 @@ describe("test file", () => {
     })
     const chunker = await Rabin.create()
 
-    const { writer, ...importer } = Lib.create(Lib.configure({ chunker }))
-    const collector = collect(importer.blocks)
-    const file = writer.createFileWriter()
+    const fs = UnixFS.create(UnixFS.configure({ chunker }))
+    const collector = collect(fs.readable)
+    const file = UnixFS.createFileWriter(fs)
 
     for await (const slice of content) {
       file.write(slice)
     }
     const link = await file.close()
-    writer.close()
+    fs.close()
     const blocks = await collector
 
     assert.deepEqual(
@@ -162,21 +161,21 @@ describe("test file", () => {
       byteLength: CHUNK_SIZE * 2,
     })
 
-    const { writer, ...importer } = Lib.create(
-      Lib.configure({
+    const fs = UnixFS.create(
+      UnixFS.configure({
         chunker: FixedSize.withMaxChunkSize(1300),
         fileLayout: Trickle,
-        fileChunkEncoder: Lib.UnixFSRawLeaf,
+        fileChunkEncoder: UnixFS.UnixFSRawLeaf,
       })
     )
-    const file = writer.createFileWriter()
-    const collector = collect(importer.blocks)
+    const file = UnixFS.createFileWriter(fs)
+    const collector = collect(fs.readable)
 
     for await (const slice of content) {
       file.write(slice)
     }
     const link = await file.close()
-    writer.close()
+    fs.close()
     const blocks = await collector
 
     assert.deepEqual(link, {
@@ -194,21 +193,21 @@ describe("test file", () => {
       byteLength: CHUNK_SIZE * 2,
     })
 
-    const { writer, ...importer } = Lib.create(
-      Lib.configure({
+    const fs = UnixFS.create(
+      UnixFS.configure({
         chunker: FixedSize.withMaxChunkSize(100000),
         fileLayout: Trickle.configure({ maxDirectLeaves: 5 }),
-        fileChunkEncoder: Lib.UnixFSRawLeaf,
+        fileChunkEncoder: UnixFS.UnixFSRawLeaf,
       })
     )
-    const collector = collect(importer.blocks)
-    const file = writer.createFileWriter()
+    const collector = collect(fs.readable)
+    const file = UnixFS.createFileWriter(fs)
 
     for await (const slice of content) {
       file.write(slice)
     }
     const link = await file.close()
-    writer.close()
+    fs.close()
     const blocks = await collector
 
     assert.deepEqual(link, {
@@ -228,22 +227,22 @@ describe("test file", () => {
 
     const content = hashrecur({ byteLength: chunkSize * leafCount })
 
-    const { writer, ...importer } = Lib.create(
-      Lib.configure({
+    const fs = UnixFS.create(
+      UnixFS.configure({
         chunker: FixedSize.withMaxChunkSize(chunkSize),
         fileLayout: Trickle.configure({ maxDirectLeaves: maxLeaves }),
-        fileChunkEncoder: Lib.UnixFSRawLeaf,
+        fileChunkEncoder: UnixFS.UnixFSRawLeaf,
       })
     )
 
-    const collector = collect(importer.blocks)
-    const file = writer.createFileWriter()
+    const collector = collect(fs.readable)
+    const file = UnixFS.createFileWriter(fs)
 
     for await (const slice of content) {
       file.write(slice)
     }
     const link = await file.close()
-    writer.close()
+    fs.close()
     const blocks = await collector
 
     assert.deepEqual(link, {
@@ -256,13 +255,13 @@ describe("test file", () => {
   })
 
   it("write empty with defaults", async function () {
-    const { writer, ...importer } = Lib.create()
-    const file = writer.createFileWriter()
-    const collector = collect(importer.blocks)
+    const fs = UnixFS.create()
+    const file = UnixFS.createFileWriter(fs)
+    const collector = collect(fs.readable)
 
     file.write(new Uint8Array())
     const link = await file.close()
-    writer.close()
+    fs.close()
     const blocks = await collector
 
     assert.deepEqual(link, {

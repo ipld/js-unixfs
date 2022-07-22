@@ -8,19 +8,22 @@ export const defaults = File.defaults
 
 /**
  * @template [Layout=unknown]
- * @param {object} options
- * @param {API.BlockWriter} options.writer
- * @param {UnixFS.Metadata} [options.metadata]
- * @param {API.FileWriterConfig<Layout>} [options.config]
- * @param {boolean} [options.preventClose]
+ * @param {API.DirectoryConfig<Layout>} config
+ * @param {API.Metadata} metadata
  * @returns {API.DirectoryWriterView<Layout>}
  */
-export const create = ({
-  writer,
-  metadata = {},
-  config = defaults(),
-  preventClose = false,
-}) => new DirectoryWriter(writer, metadata, config, new Map(), preventClose)
+export const create = (
+  { writable, preventClose = true, config = defaults() },
+  metadata = {}
+) =>
+  new DirectoryWriter(
+    writable.getWriter(),
+    metadata,
+    config,
+    new Map(),
+    true,
+    preventClose
+  )
 
 /**
  * @template {API.State} Writer
@@ -31,17 +34,18 @@ export const create = ({
  * @returns {Writer}
  */
 export const write = (writer, name, link, { overwrite = false } = {}) => {
+  const writable = asWritable(writer)
   if (name.includes("/")) {
     throw new Error(
       `Directory entry name "${name}" contains forbidden '/' character`
     )
   }
-  if (!overwrite && writer.entries.has(name)) {
+  if (!overwrite && writable.entries.has(name)) {
     throw new Error(`Diretroy already contains entry with name "${name}"`)
   } else {
     const { cid, dagByteLength } = link
-    writer.entries.set(name, { name, cid, dagByteLength })
-    return writer
+    writable.entries.set(name, { name, cid, dagByteLength })
+    return writable
   }
 }
 
@@ -52,8 +56,23 @@ export const write = (writer, name, link, { overwrite = false } = {}) => {
  * @returns {Writer}
  */
 export const remove = (writer, name) => {
-  writer.entries.delete(name)
+  asWritable(writer).entries.delete(name)
   return writer
+}
+
+/**
+ * @template {API.State} Writer
+ * @param {Writer} writer
+ * @returns {Writer}
+ */
+const asWritable = writer => {
+  if (writer.writable) {
+    return writer
+  } else {
+    throw new Error(
+      `Can not change written directory, but you can .fork() and make changes to it`
+    )
+  }
 }
 
 /**
@@ -61,17 +80,18 @@ export const remove = (writer, name) => {
  * @param {API.State<Layout>} state
  * @returns {Promise<UnixFS.DirectoryLink>}
  */
-export const close = async (
-  { writer, config, entries, metadata },
-  preventClose = false
-) => {
+export const close = async (state, preventClose = false) => {
+  const { writer, config, entries, metadata } = asWritable(state)
+  state.writable = false
   const links = [...entries.values()]
   const node = UnixFS.createFlatDirectory(links, metadata)
   const bytes = UnixFS.encodeDirectory(node)
   const digest = await config.hasher.digest(bytes)
   const cid = config.createCID(UnixFS.code, digest)
   await writer.write({ cid, bytes })
-  if (!preventClose) {
+  if (preventClose) {
+    writer.releaseLock()
+  } else {
     await writer.close()
   }
 
@@ -84,15 +104,20 @@ export const close = async (
 /**
  * @template L
  * @template {API.State<L>} Writer
- * @param {Writer} writer
+ * @param {Writer} directoryWriter
+ * @param {API.WritableBlockStream} [writable]
  * @returns {API.DirectoryWriterView<L>}
  */
-export const fork = ({ writer, metadata, config, entries, preventClose }) =>
+export const fork = (
+  { writer, metadata, config, entries, preventClose },
+  writable
+) =>
   new DirectoryWriter(
-    writer,
+    writable ? writable.getWriter() : writer,
     metadata,
     config,
     new Map(entries.entries()),
+    true,
     preventClose
   )
 
@@ -104,16 +129,18 @@ class DirectoryWriter {
   /**
    * @param {API.BlockWriter} writer
    * @param {UnixFS.Metadata} metadata
-   * @param {API.FileWriterConfig<Layout>} config
+   * @param {API.EncoderConfig<Layout>} config
    * @param {Map<string, UnixFS.DirectoryEntryLink>} entries
+   * @param {boolean} writable
    * @param {boolean} preventClose
    */
-  constructor(writer, metadata, config, entries, preventClose) {
+  constructor(writer, metadata, config, entries, writable, preventClose) {
     this.writer = writer
     this.metadata = metadata
     this.config = config
     this.entries = entries
     this.preventClose = preventClose
+    this.writable = writable
   }
 
   /**
@@ -134,10 +161,11 @@ class DirectoryWriter {
   }
 
   /**
+   * @param {API.WritableBlockStream} [writable]
    * @returns {API.DirectoryWriterView<Layout>}
    */
-  fork() {
-    return fork(this)
+  fork(writable) {
+    return fork(this, writable)
   }
 
   close() {

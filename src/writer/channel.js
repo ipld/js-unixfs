@@ -68,6 +68,8 @@ class Writer {
     return this.queue.desiredSize || 0
   }
 
+  releaseLock() {}
+
   /**
    * @param {T} item
    * @returns {Promise<void>}

@@ -4,10 +4,10 @@ import { encodeUTF8, CID, collect, importFile } from "./util.js"
 
 describe("test directory", () => {
   it("empty dir", async () => {
-    const { blocks, writer } = UnixFS.create()
-    const root = writer.createDirectoryWriter()
+    const fs = UnixFS.create()
+    const root = UnixFS.createDirectoryWriter(fs)
     const link = await root.close()
-    writer.close()
+    fs.close()
 
     assert.deepEqual(link, {
       cid: CID.parse(
@@ -15,7 +15,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 4,
     })
-    const output = await collect(blocks)
+    const output = await collect(fs.readable)
 
     assert.deepEqual(
       output.map($ => $.cid),
@@ -24,9 +24,9 @@ describe("test directory", () => {
   })
 
   it("basic file in directory", async () => {
-    const { blocks, writer } = UnixFS.create()
-    const root = writer.createDirectoryWriter()
-    const file = writer.createFileWriter()
+    const fs = UnixFS.create()
+    const root = UnixFS.createDirectoryWriter(fs)
+    const file = UnixFS.createFileWriter(fs)
     const content = encodeUTF8("this file does not have much content\n")
     file.write(content)
     const fileLink = await file.close()
@@ -49,9 +49,9 @@ describe("test directory", () => {
       ),
     })
 
-    writer.close()
+    fs.close()
 
-    const output = await collect(blocks)
+    const output = await collect(fs.readable)
 
     assert.deepEqual(
       output.map($ => $.cid),
@@ -67,9 +67,9 @@ describe("test directory", () => {
   })
 
   it("nested directory", async () => {
-    const { blocks, writer } = UnixFS.create()
-    const root = writer.createDirectoryWriter()
-    const nested = writer.createDirectoryWriter()
+    const fs = UnixFS.create()
+    const root = UnixFS.createDirectoryWriter(fs)
+    const nested = UnixFS.createDirectoryWriter(fs)
 
     root.write("nested", await nested.close())
     assert.deepEqual(await root.close(), {
@@ -78,8 +78,8 @@ describe("test directory", () => {
       ),
       dagByteLength: 58,
     })
-    await writer.close()
-    const items = await collect(blocks)
+    await fs.close()
+    const items = await collect(fs.readable)
     assert.deepEqual(
       items.map(({ cid }) => cid.toString()),
       [
@@ -90,16 +90,16 @@ describe("test directory", () => {
   })
 
   it("double nested directory", async () => {
-    const { blocks, writer } = UnixFS.create()
-    const root = writer.createDirectoryWriter()
-    const nested = writer.createDirectoryWriter()
+    const fs = UnixFS.create()
+    const root = UnixFS.createDirectoryWriter(fs)
+    const nested = UnixFS.createDirectoryWriter(fs)
 
     root.write("nested", await nested.close())
-    const main = writer.createDirectoryWriter()
+    const main = UnixFS.createDirectoryWriter(fs)
     main.write("root", await root.close())
     const link = await main.close()
-    await writer.close()
-    const items = await collect(blocks)
+    await fs.close()
+    const items = await collect(fs.readable)
     assert.deepEqual(
       items.map(({ cid }) => cid.toString()),
       [
@@ -111,11 +111,11 @@ describe("test directory", () => {
   })
 
   it("throws if file already exists", async () => {
-    const { blocks, writer } = UnixFS.create()
+    const fs = UnixFS.create()
 
-    const root = writer.createDirectoryWriter()
+    const root = UnixFS.createDirectoryWriter(fs)
 
-    const hello = await importFile(writer, ["hello"])
+    const hello = await importFile(fs, ["hello"])
     assert.deepEqual(hello, {
       cid: CID.parse(
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
@@ -124,7 +124,7 @@ describe("test directory", () => {
       dagByteLength: 13,
     })
 
-    const bye = await importFile(writer, ["bye"])
+    const bye = await importFile(fs, ["bye"])
     assert.deepEqual(bye, {
       cid: CID.parse(
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
@@ -147,8 +147,8 @@ describe("test directory", () => {
       ),
       dagByteLength: 124,
     })
-    await writer.close()
-    const items = await collect(blocks)
+    await fs.close()
+    const items = await collect(fs.readable)
     assert.deepEqual(
       items.map(item => item.cid.toString()),
       [
@@ -160,11 +160,11 @@ describe("test directory", () => {
   })
 
   it("can overwrite existing", async () => {
-    const { blocks, writer } = UnixFS.create()
+    const fs = UnixFS.create()
 
-    const root = writer.createDirectoryWriter()
+    const root = UnixFS.createDirectoryWriter(fs)
 
-    const hello = await importFile(writer, ["hello"])
+    const hello = await importFile(fs, ["hello"])
     assert.deepEqual(hello, {
       cid: CID.parse(
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
@@ -173,7 +173,7 @@ describe("test directory", () => {
       dagByteLength: 13,
     })
 
-    const bye = await importFile(writer, ["bye"])
+    const bye = await importFile(fs, ["bye"])
     assert.deepEqual(bye, {
       cid: CID.parse(
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
@@ -192,14 +192,49 @@ describe("test directory", () => {
       ),
       dagByteLength: 64,
     })
-    await writer.close()
-    const items = await collect(blocks)
+    await fs.close()
+    const items = await collect(fs.readable)
     assert.deepEqual(
       items.map(item => item.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
         "bafybeid6gy6b24lpyqtdmch7chsef4wykmxsh3ysuj2ou3wlz3cevdcc4a",
+      ]
+    )
+  })
+
+  it("can delete entries", async () => {
+    const fs = UnixFS.create()
+
+    const root = UnixFS.createDirectoryWriter(fs)
+
+    const hello = await importFile(fs, ["hello"])
+    assert.deepEqual(hello, {
+      cid: CID.parse(
+        "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
+      ),
+      contentByteLength: 5,
+      dagByteLength: 13,
+    })
+
+    root.write("hello", hello)
+    root.remove("hello")
+    const link = await root.close()
+
+    assert.deepEqual(link, {
+      cid: CID.parse(
+        "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354"
+      ),
+      dagByteLength: 4,
+    })
+    await fs.close()
+    const items = await collect(fs.readable)
+    assert.deepEqual(
+      items.map(item => item.cid.toString()),
+      [
+        "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
+        "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354",
       ]
     )
   })

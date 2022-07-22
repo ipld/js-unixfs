@@ -1,8 +1,15 @@
-import { FileWriterConfig } from "../file.js"
+import { EncoderConfig } from "../file.js"
 import * as UnixFS from "../unixfs.js"
-import type { BlockWriter } from "../file.js"
+import type { BlockWriter, WritableBlockStream } from "../file.js"
+export type { Metadata } from "../unixfs.js"
 
-export type { BlockWriter, FileWriterConfig, FileWriter } from "../file/api.js"
+export type {
+  WritableBlockStream,
+  BlockWriter,
+  EncoderConfig,
+  WriterConfig,
+  FileWriter,
+} from "../file/api.js"
 
 export interface DirectoryWriter {
   // /**
@@ -41,7 +48,7 @@ export interface DirectoryWriter {
   remove(name: string): DirectoryWriter
 
   close(): Promise<UnixFS.DirectoryLink>
-  fork(): DirectoryWriter
+  fork(writable?: WritableBlockStream): DirectoryWriter
 }
 
 export interface WriteOptions {
@@ -57,9 +64,11 @@ export interface State<Layout extends unknown = unknown> {
   readonly entries: Map<string, UnixFS.DirectoryEntryLink>
   readonly metadata: UnixFS.Metadata
   readonly writer: BlockWriter
-  readonly config: FileWriterConfig<Layout>
+  readonly config: EncoderConfig<Layout>
 
   readonly preventClose: boolean
+
+  writable: boolean
 }
 
 export interface DirectoryWriterView<Layout extends unknown = unknown>
@@ -67,3 +76,9 @@ export interface DirectoryWriterView<Layout extends unknown = unknown>
     State<Layout> {}
 
 export type EntryLink = UnixFS.FileLink | UnixFS.DirectoryLink
+
+export interface DirectoryConfig<Layout> {
+  writable: WritableBlockStream
+  preventClose?: boolean
+  config?: EncoderConfig<Layout>
+}

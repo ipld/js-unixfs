@@ -15,7 +15,8 @@ export interface Defer<T, X = unknown> extends Deferred<T, X>, PromiseLike<T> {
 
 export interface Writer<T> {
   readonly desiredSize: number | null
-  ready: Promise<void>
+  releaseLock(): void
+  ready: Await<void>
 
   write(data: T): Await<void>
 
