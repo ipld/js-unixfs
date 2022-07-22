@@ -136,6 +136,6 @@ class DirectoryWriter {
   }
 
   close() {
-    return close(this)
+    return close(this, this.preventClose)
   }
 }
