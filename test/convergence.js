@@ -1,6 +1,6 @@
 import { assert } from "chai"
 import Matrix from "./dataset/convergence_rawdata.js"
-import * as Lib from "../src/lib.js"
+import * as UnixFS from "../src/lib.js"
 import { parseConfig, unpackFile } from "./matrix.js"
 import { CID, collect, iterate, encodeCar, writeFile } from "./util.js"
 
@@ -15,25 +15,25 @@ const createTest = spec =>
   async function test() {
     this.timeout(50000)
     const { cid, ...config } = await parseConfig(spec)
-    const { writer, blocks } = Lib.create(config)
+    const fs = UnixFS.create(config)
     const source = await unpackFile(config.url)
 
     // await writeFile("fail.txt", iterate(source.stream()))
     // return
 
-    const car = encodeCar(blocks)
+    const car = encodeCar(fs.readable)
     const ready = writeFile("expect.car", car)
     // const ready = collect(importer.blocks)
 
     // @ts-expect-error - see https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59057
     const stream = /** @type {ReadableStream<Uint8Array>} */ (source.stream())
-    const file = writer.createFileWriter()
+    const file = UnixFS.createFileWriter(fs)
     for await (const slice of iterate(stream)) {
       file.write(slice)
     }
 
     const link = await file.close()
-    writer.close()
+    fs.close()
     await ready
     // console.log((await ready).map(block => `${block.cid}`).join("\n"))
 
@@ -68,7 +68,9 @@ const isMissingFile = config => config.source.endsWith("/rand_5MiB.zst")
  * @param {Config} config
  */
 const isProblematicFile = config =>
-  config.source.endsWith("/rlarge_repeat_5GiB.zst")
+  config.source.endsWith("/large_repeat_5GiB.zst") ||
+  config.source.endsWith("/zero_0B.zst") ||
+  config.source.endsWith("/repeat_0.04GiB_174.zst")
 /**
  * @param {Config} config
  */
