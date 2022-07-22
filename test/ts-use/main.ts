@@ -11,11 +11,11 @@ export const test = async () => {
     content: new Uint8Array(32).fill(1),
   })
 
-  const { blocks, writer } = UnixFS.create()
-  const file = writer.createFileWriter()
+  const fs = UnixFS.create()
+  const file = UnixFS.createFileWriter(fs)
   file.write(new Uint8Array(32).fill(1))
   const link = await file.close()
   link.cid.toString()
 
-  writer.close()
+  fs.close()
 }
