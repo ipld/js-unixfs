@@ -1,8 +1,9 @@
-import { File } from "@web-std/file"
+import { File, Blob } from "@web-std/file"
 import { CID } from "multiformats"
 import fetch from "@web-std/fetch"
 import { sha256 } from "multiformats/hashes/sha2"
 import { CarWriter } from "@ipld/car"
+import * as UnixFS from "../src/lib.js"
 
 const utf8Encoder = new TextEncoder()
 
@@ -119,6 +120,22 @@ export const writeFile = async (target, content) => {
       error => (error ? reject(error) : resolve(undefined))
     )
   )
+}
+
+/**
+ * @param {UnixFS.FileSystemWriter} writer
+ * @param {BlobPart[]} content
+ */
+export const importFile = async (writer, content) => {
+  const file = writer.createFileWriter()
+  const blob = new Blob(content)
+  /** @type {ReadableStream<Uint8Array>} */
+  // @ts-ignore
+  const stream = blob.stream()
+  for await (const chunk of iterate(stream)) {
+    file.write(chunk)
+  }
+  return await file.close()
 }
 
 export { File, CID, fetch }
