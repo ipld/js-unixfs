@@ -5,6 +5,8 @@ import * as Writer from "./file/writer.js"
 import * as Directory from "./directory.js"
 import * as UnixFS from "./codec.js"
 
+export * from "./api.js"
+
 export { encode, decode, NodeType } from "./codec.js"
 export {
   create as createFileWriter,
