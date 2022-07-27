@@ -136,7 +136,7 @@ describe("test directory", () => {
     root.write("hello", hello)
     assert.throws(
       () => root.write("hello", bye),
-      /Diretroy already contains entry with name "hello"/
+      /Directory already contains entry with name "hello"/
     )
     root.write("bye", bye)
     const link = await root.close()

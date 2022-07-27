@@ -41,7 +41,7 @@ export const write = (writer, name, link, { overwrite = false } = {}) => {
     )
   }
   if (!overwrite && writable.entries.has(name)) {
-    throw new Error(`Diretroy already contains entry with name "${name}"`)
+    throw new Error(`Directory already contains entry with name "${name}"`)
   } else {
     const { cid, dagByteLength } = link
     writable.entries.set(name, { name, cid, dagByteLength })

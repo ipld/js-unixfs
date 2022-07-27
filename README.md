@@ -82,13 +82,13 @@ export const demo = async () => {
   const fileLink = await file.close()
 
   // create directory and add a file we encoded above
-  const dir = UnixFS.createDirecotryWriter(fs)
+  const dir = UnixFS.createDirectoryWriter(fs)
   dir.write("intro.md", fileLink)
   const dirLink = await dir.close()
 
   // now wrap above directory with another and also add the same file
   // there
-  const root = UnixFS.createDirecotryWriter(fs)
+  const root = UnixFS.createDirectoryWriter(fs)
   root.write("user", dirLink)
   root.write("hello.md", fileLink)
 
