@@ -52,7 +52,7 @@ archive.close()
 encodeCAR({ roots: [cid], blocks: archive.blocks })
 ```
 
-If your runtime provides [`TransforStream`][] or a [`WritableStream`][] APIs you can create filesystem writer from the `WritableStream<Block>` directly (this will allow you to control exactly how `readable`/`writable` streams deal with backpressuer)
+If your runtime provides [`TransformStream`][] or a [`WritableStream`][] APIs you can create filesystem writer from the `WritableStream<Block>` directly (this will allow you to control exactly how `readable`/`writable` streams deal with back pressure)
 
 ```ts
 import * as UnixFS from "@ipld/unixfs"
