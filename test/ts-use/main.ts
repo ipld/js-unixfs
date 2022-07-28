@@ -11,7 +11,8 @@ export const test = async () => {
     content: new Uint8Array(32).fill(1),
   })
 
-  const fs = UnixFS.create()
+  const { readable, writable } = new TransformStream()
+  const fs = UnixFS.createWriter({ writable })
   const file = UnixFS.createFileWriter(fs)
   file.write(new Uint8Array(32).fill(1))
   const link = await file.close()

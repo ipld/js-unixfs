@@ -1,10 +1,14 @@
 import * as UnixFS from "../src/lib.js"
+import { TransformStream } from "@web-std/stream"
 import { assert } from "chai"
 import { encodeUTF8, CID, collect, importFile } from "./util.js"
 
+const createChannel = (highWaterMark = 10) =>
+  new TransformStream({}, {}, { highWaterMark })
 describe("test directory", () => {
   it("empty dir", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
     const root = UnixFS.createDirectoryWriter(fs)
     const link = await root.close()
     fs.close()
@@ -15,7 +19,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 4,
     })
-    const output = await collect(fs.readable)
+    const output = await collect(readable)
 
     assert.deepEqual(
       output.map($ => $.cid),
@@ -24,7 +28,8 @@ describe("test directory", () => {
   })
 
   it("basic file in directory", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
     const root = UnixFS.createDirectoryWriter(fs)
     const file = UnixFS.createFileWriter(fs)
     const content = encodeUTF8("this file does not have much content\n")
@@ -51,7 +56,7 @@ describe("test directory", () => {
 
     fs.close()
 
-    const output = await collect(fs.readable)
+    const output = await collect(readable)
 
     assert.deepEqual(
       output.map($ => $.cid),
@@ -67,7 +72,8 @@ describe("test directory", () => {
   })
 
   it("nested directory", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
     const root = UnixFS.createDirectoryWriter(fs)
     const nested = UnixFS.createDirectoryWriter(fs)
 
@@ -79,7 +85,7 @@ describe("test directory", () => {
       dagByteLength: 58,
     })
     await fs.close()
-    const items = await collect(fs.readable)
+    const items = await collect(readable)
     assert.deepEqual(
       items.map(({ cid }) => cid.toString()),
       [
@@ -90,7 +96,8 @@ describe("test directory", () => {
   })
 
   it("double nested directory", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
     const root = UnixFS.createDirectoryWriter(fs)
     const nested = UnixFS.createDirectoryWriter(fs)
 
@@ -99,7 +106,7 @@ describe("test directory", () => {
     main.write("root", await root.close())
     const link = await main.close()
     await fs.close()
-    const items = await collect(fs.readable)
+    const items = await collect(readable)
     assert.deepEqual(
       items.map(({ cid }) => cid.toString()),
       [
@@ -111,7 +118,8 @@ describe("test directory", () => {
   })
 
   it("throws if file already exists", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
 
     const root = UnixFS.createDirectoryWriter(fs)
 
@@ -148,7 +156,7 @@ describe("test directory", () => {
       dagByteLength: 124,
     })
     await fs.close()
-    const items = await collect(fs.readable)
+    const items = await collect(readable)
     assert.deepEqual(
       items.map(item => item.cid.toString()),
       [
@@ -160,7 +168,8 @@ describe("test directory", () => {
   })
 
   it("can overwrite existing", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
 
     const root = UnixFS.createDirectoryWriter(fs)
 
@@ -193,7 +202,7 @@ describe("test directory", () => {
       dagByteLength: 64,
     })
     await fs.close()
-    const items = await collect(fs.readable)
+    const items = await collect(readable)
     assert.deepEqual(
       items.map(item => item.cid.toString()),
       [
@@ -205,7 +214,8 @@ describe("test directory", () => {
   })
 
   it("can delete entries", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
 
     const root = UnixFS.createDirectoryWriter(fs)
 
@@ -229,7 +239,7 @@ describe("test directory", () => {
       dagByteLength: 4,
     })
     await fs.close()
-    const items = await collect(fs.readable)
+    const items = await collect(readable)
     assert.deepEqual(
       items.map(item => item.cid.toString()),
       [
@@ -240,7 +250,8 @@ describe("test directory", () => {
   })
 
   it("throws on invalid filenames", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
     const root = UnixFS.createDirectoryWriter(fs)
     const hello = await importFile(fs, ["hello"])
 
@@ -252,7 +263,8 @@ describe("test directory", () => {
   })
 
   it("can not change after close", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
 
     const root = UnixFS.createDirectoryWriter(fs)
 
@@ -288,7 +300,7 @@ describe("test directory", () => {
     )
 
     await fs.close()
-    const items = await collect(fs.readable)
+    const items = await collect(readable)
     assert.deepEqual(
       items.map(item => item.cid.toString()),
       [
@@ -300,7 +312,8 @@ describe("test directory", () => {
   })
 
   it("can fork and edit", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
 
     const root = UnixFS.createDirectoryWriter(fs)
 
@@ -340,7 +353,7 @@ describe("test directory", () => {
     })
 
     await fs.close()
-    const items = await collect(fs.readable)
+    const items = await collect(readable)
     assert.deepEqual(
       items.map(item => item.cid.toString()),
       [
@@ -353,7 +366,8 @@ describe("test directory", () => {
   })
 
   it("can autoclose", async () => {
-    const root = UnixFS.createDirectory()
+    const { readable, writable } = createChannel()
+    const root = UnixFS.createDirectoryWriter({ writable, preventClose: false })
     const file = UnixFS.createFileWriter(root)
     file.write(new TextEncoder().encode("hello"))
     root.write("hello", await file.close())
@@ -364,10 +378,7 @@ describe("test directory", () => {
       dagByteLength: 66,
     })
 
-    const output = []
-    for await (const block of root.blocks) {
-      output.push(block.cid.toString())
-    }
+    const output = (await collect(readable)).map($ => $.cid.toString())
 
     assert.deepEqual(output, [
       "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
@@ -376,7 +387,8 @@ describe("test directory", () => {
   })
 
   it("fork into other stream", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
 
     const root = UnixFS.createDirectoryWriter(fs)
 
@@ -406,9 +418,9 @@ describe("test directory", () => {
       dagByteLength: 66,
     })
 
-    const patch = UnixFS.create()
+    const patch = createChannel()
 
-    const fork = root.fork(patch)
+    const fork = root.fork({ writable: patch.writable, releaseLock: true })
     fork.write("bye", bye)
     assert.deepEqual(await fork.close(), {
       cid: CID.parse(
@@ -418,7 +430,7 @@ describe("test directory", () => {
     })
 
     await fs.close()
-    const items = await collect(fs.readable)
+    const items = await collect(readable)
     assert.deepEqual(
       items.map(item => item.cid.toString()),
       [
@@ -428,7 +440,7 @@ describe("test directory", () => {
       ]
     )
 
-    await patch.close()
+    await patch.writable.close()
     const delta = await collect(patch.readable)
     assert.deepEqual(
       delta.map(item => item.cid.toString()),
@@ -437,7 +449,8 @@ describe("test directory", () => {
   })
 
   it("Use createDirectory method", async () => {
-    const fs = UnixFS.create()
+    const { readable, writable } = createChannel()
+    const fs = UnixFS.createWriter({ writable })
     const root = fs.createDirectoryWriter()
     const file = fs.createFileWriter()
     const content = encodeUTF8("this file does not have much content\n")
@@ -464,7 +477,7 @@ describe("test directory", () => {
 
     fs.close()
 
-    const output = await collect(fs.readable)
+    const output = await collect(readable)
 
     assert.deepEqual(
       output.map($ => $.cid),

@@ -89,6 +89,7 @@
   },
   "c8": {
     "exclude": [
+      "src/writer/channel.js",
       "gen/**",
       "test/**",
       "dist/**"

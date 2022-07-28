@@ -16,8 +16,9 @@ describe("test file", () => {
   it("basic file", async function () {
     this.timeout(30000)
     const content = encodeUTF8("this file does not have much content\n")
+    const { readable, writable } = Channel.createBlockChannel()
 
-    const fs = UnixFS.create()
+    const fs = UnixFS.createWriter({ writable })
     const file = UnixFS.createFileWriter(fs)
     await file.write(content)
     const link = await file.close()
@@ -30,8 +31,8 @@ describe("test file", () => {
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
     )
 
-    const { blocks } = fs
-    const read = await blocks.next()
+    const blocks = readable.getReader()
+    const read = await blocks.read()
     if (read.done) {
       assert.fail("expected to get a block")
     }
@@ -42,12 +43,13 @@ describe("test file", () => {
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
     )
 
-    const end = await blocks.next()
+    const end = await blocks.read()
     assert.deepEqual(end, { done: true, value: undefined })
   })
 
   it("splits into 3 chunks", async function () {
-    const fs = UnixFS.create()
+    const { readable, writable } = Channel.createBlockChannel()
+    const fs = UnixFS.createWriter({ writable })
     const file = UnixFS.createFileWriter(fs)
     file.write(new Uint8Array(CHUNK_SIZE).fill(1))
     file.write(new Uint8Array(CHUNK_SIZE).fill(2))
@@ -63,8 +65,8 @@ describe("test file", () => {
       ),
     })
 
-    const { blocks } = fs
-    const r1 = await blocks.next()
+    const blocks = readable.getReader()
+    const r1 = await blocks.read()
     if (r1.done) {
       assert.fail("expected to get a block")
     }
@@ -74,7 +76,7 @@ describe("test file", () => {
       CID.parse("bafybeihhsdoupgd3fnl3e3367ymsanmikafpllldsdt37jzyoh6nuatowe")
     )
 
-    const r2 = await blocks.next()
+    const r2 = await blocks.read()
     if (r2.done) {
       assert.fail("expected to get a block")
     }
@@ -83,7 +85,7 @@ describe("test file", () => {
       CID.parse("bafybeief3dmadxfymhhhrflqytqmlhlz47w6glaxvyzmm6s6tpfb6izzee")
     )
 
-    const r3 = await blocks.next()
+    const r3 = await blocks.read()
     if (r3.done) {
       assert.fail("expected to get a block")
     }
@@ -97,14 +99,18 @@ describe("test file", () => {
 
   it("--chunker=size-65535 --trickle=false --raw-leaves=false --cid-version=1", async () => {
     const chunkSize = 65535
-    const fs = UnixFS.create({
-      chunker: FixedSize.withMaxChunkSize(chunkSize),
-      fileChunkEncoder: UnixFS.UnixFSLeaf,
-      smallFileEncoder: UnixFS.UnixFSLeaf,
-      fileLayout: Balanced,
-      createCID: CID.createV1,
-      hasher: sha256,
-      fileEncoder: UnixFS,
+    const { readable, writable } = Channel.createBlockChannel()
+    const fs = UnixFS.createWriter({
+      writable,
+      settings: {
+        chunker: FixedSize.withMaxChunkSize(chunkSize),
+        fileChunkEncoder: UnixFS.UnixFSLeaf,
+        smallFileEncoder: UnixFS.UnixFSLeaf,
+        fileLayout: Balanced,
+        linker: { createLink: CID.createV1 },
+        hasher: sha256,
+        fileEncoder: UnixFS,
+      },
     })
     const file = UnixFS.createFileWriter(fs)
 
@@ -137,8 +143,13 @@ describe("test file", () => {
     })
     const chunker = await Rabin.create()
 
-    const fs = UnixFS.create(UnixFS.configure({ chunker }))
-    const collector = collect(fs.readable)
+    const { readable, writable } = Channel.createBlockChannel()
+
+    const fs = UnixFS.createWriter({
+      writable,
+      settings: UnixFS.configure({ chunker }),
+    })
+    const collector = collect(readable)
     const file = UnixFS.createFileWriter(fs)
 
     for await (const slice of content) {
@@ -161,16 +172,18 @@ describe("test file", () => {
     const content = hashrecur({
       byteLength: CHUNK_SIZE * 2,
     })
+    const { readable, writable } = Channel.createBlockChannel()
 
-    const fs = UnixFS.create(
-      UnixFS.configure({
+    const fs = UnixFS.createWriter({
+      writable,
+      settings: UnixFS.configure({
         chunker: FixedSize.withMaxChunkSize(1300),
         fileLayout: Trickle,
         fileChunkEncoder: UnixFS.UnixFSRawLeaf,
-      })
-    )
+      }),
+    })
     const file = UnixFS.createFileWriter(fs)
-    const collector = collect(fs.readable)
+    const collector = collect(readable)
 
     for await (const slice of content) {
       file.write(slice)
@@ -193,15 +206,17 @@ describe("test file", () => {
     const content = hashrecur({
       byteLength: CHUNK_SIZE * 2,
     })
+    const { readable, writable } = Channel.createBlockChannel()
 
-    const fs = UnixFS.create(
-      UnixFS.configure({
+    const fs = UnixFS.createWriter({
+      writable,
+      settings: UnixFS.configure({
         chunker: FixedSize.withMaxChunkSize(100000),
         fileLayout: Trickle.configure({ maxDirectLeaves: 5 }),
         fileChunkEncoder: UnixFS.UnixFSRawLeaf,
-      })
-    )
-    const collector = collect(fs.readable)
+      }),
+    })
+    const collector = collect(readable)
     const file = UnixFS.createFileWriter(fs)
 
     for await (const slice of content) {
@@ -227,16 +242,18 @@ describe("test file", () => {
     const leafCount = 42
 
     const content = hashrecur({ byteLength: chunkSize * leafCount })
+    const { readable, writable } = Channel.createBlockChannel()
 
-    const fs = UnixFS.create(
-      UnixFS.configure({
+    const fs = UnixFS.createWriter({
+      writable,
+      settings: UnixFS.configure({
         chunker: FixedSize.withMaxChunkSize(chunkSize),
         fileLayout: Trickle.configure({ maxDirectLeaves: maxLeaves }),
         fileChunkEncoder: UnixFS.UnixFSRawLeaf,
-      })
-    )
+      }),
+    })
 
-    const collector = collect(fs.readable)
+    const collector = collect(readable)
     const file = UnixFS.createFileWriter(fs)
 
     for await (const slice of content) {
@@ -256,9 +273,10 @@ describe("test file", () => {
   })
 
   it("write empty with defaults", async function () {
-    const fs = UnixFS.create()
+    const { readable, writable } = Channel.createBlockChannel()
+    const fs = UnixFS.createWriter({ writable })
     const file = UnixFS.createFileWriter(fs)
-    const collector = collect(fs.readable)
+    const collector = collect(readable)
 
     file.write(new Uint8Array())
     const link = await file.close()

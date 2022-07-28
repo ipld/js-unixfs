@@ -11,7 +11,7 @@ import * as Balanced from "./file/layout/balanced.js"
 export * from "./file/api.js"
 
 /**
- * @returns {API.EncoderConfig}
+ * @returns {API.EncoderSettings}
  */
 export const defaults = () => ({
   chunker: FixedSize,
@@ -20,13 +20,13 @@ export const defaults = () => ({
   fileEncoder: UnixFS,
   fileLayout: Balanced.withWidth(174),
   hasher: sha256,
-  createCID: CID.createV1,
+  linker: { createLink: CID.createV1 },
 })
 
 /**
  * @template {unknown} Layout
- * @param {Partial<API.EncoderConfig<Layout>>} config
- * @returns {API.EncoderConfig<Layout>}
+ * @param {Partial<API.EncoderSettings<Layout>>} config
+ * @returns {API.EncoderSettings<Layout>}
  */
 export const configure = config => ({
   ...defaults(),
@@ -47,17 +47,18 @@ export const UnixFSRawLeaf = {
 
 /**
  * @template Layout
- * @param {API.FileWriterConfig<Layout>} options
+ * @param {API.FileWriterOptions<Layout>} options
  * @param {UnixFS.Metadata} [metadata]
  * @returns {API.FileWriter<Layout>}
  */
 export const create = (
-  { writable, preventClose = true, config = defaults() },
+  { writable, preventClose = true, releaseLock = false, settings = defaults() },
   metadata = {}
 ) =>
   new FileWriterView(
-    Writer.init(writable.getWriter(), metadata, configure(config)),
-    !preventClose
+    Writer.init(writable.getWriter(), metadata, configure(settings)),
+    !preventClose,
+    releaseLock
   )
 
 /**
@@ -76,13 +77,13 @@ export const write = async (view, bytes) => {
  * @template T
  * @param {API.FileWriter<T>} view
  */
-export const close = async (view, closeWriter = false) => {
+export const close = async (view, closeWriter = false, releaseLock = false) => {
   await perform(view, Task.send({ type: "close" }))
   const { state } = view
   if (state.status === "linked") {
     if (closeWriter) {
       await view.state.writer.close()
-    } else {
+    } else if (releaseLock) {
       await view.state.writer.releaseLock()
     }
     return state.link
@@ -116,11 +117,22 @@ class FileWriterView {
   /**
    * @param {Writer.State<Layout>} state
    * @param {boolean} closeWriter
+   * @param {boolean} releaseLock
    */
-  constructor(state, closeWriter) {
+  constructor(state, closeWriter, releaseLock) {
     this.state = state
     this.closeWriter = closeWriter
+    this.releaseLock = releaseLock
   }
+
+  get writable() {
+    return this
+  }
+
+  getWriter() {
+    return this.state.writer
+  }
+
   /**
    * @param {Uint8Array} bytes
    * @returns {Promise<API.FileWriter<Layout>>}
@@ -132,6 +144,6 @@ class FileWriterView {
    * @returns {Promise<UnixFS.FileLink>}
    */
   close() {
-    return close(this, this.closeWriter)
+    return close(this, this.closeWriter, this.releaseLock)
   }
 }

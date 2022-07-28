@@ -8,21 +8,22 @@ export const defaults = File.defaults
 
 /**
  * @template [Layout=unknown]
- * @param {API.DirectoryConfig<Layout>} config
+ * @param {API.DirectoryWriterOptions<Layout>} config
  * @param {API.Metadata} metadata
  * @returns {API.DirectoryWriterView<Layout>}
  */
 export const create = (
-  { writable, preventClose = true, config = defaults() },
+  { writable, preventClose = true, releaseLock = false, settings = defaults() },
   metadata = {}
 ) =>
   new DirectoryWriter(
     writable.getWriter(),
     metadata,
-    config,
+    settings,
     new Map(),
     false,
-    !preventClose
+    !preventClose,
+    releaseLock
   )
 
 /**
@@ -80,18 +81,22 @@ const asWritable = writer => {
  * @param {API.State<Layout>} state
  * @returns {Promise<UnixFS.DirectoryLink>}
  */
-export const close = async (state, closeWriter = false) => {
-  const { writer, config, entries, metadata } = asWritable(state)
+export const close = async (
+  state,
+  closeWriter = false,
+  releaseLock = false
+) => {
+  const { writer, settings, entries, metadata } = asWritable(state)
   state.closed = true
   const links = [...entries.values()]
   const node = UnixFS.createFlatDirectory(links, metadata)
   const bytes = UnixFS.encodeDirectory(node)
-  const digest = await config.hasher.digest(bytes)
-  const cid = config.createCID(UnixFS.code, digest)
+  const digest = await settings.hasher.digest(bytes)
+  const cid = settings.linker.createLink(UnixFS.code, digest)
   await writer.write({ cid, bytes })
   if (closeWriter) {
     await writer.close()
-  } else {
+  } else if (releaseLock) {
     writer.releaseLock()
   }
 
@@ -107,19 +112,26 @@ export const close = async (state, closeWriter = false) => {
  * @param {Writer} directoryWriter
  * @param {object} [options]
  * @param {API.WritableBlockStream} [options.writable]
+ * @param {boolean} [options.releaseLock]
+ * @param {boolean} [options.preventClose]
  * @returns {API.DirectoryWriterView<L>}
  */
 export const fork = (
-  { writer, metadata, config, entries, closeWriter },
-  { writable } = {}
+  { writer, metadata, settings, entries, closeWriter, releaseWriter },
+  {
+    writable,
+    releaseLock = writable ? releaseWriter : false,
+    preventClose = writable ? !closeWriter : true,
+  } = {}
 ) =>
   new DirectoryWriter(
     writable ? writable.getWriter() : writer,
     metadata,
-    config,
+    settings,
     new Map(entries.entries()),
     false,
-    closeWriter
+    !preventClose,
+    releaseLock
   )
 
 /**
@@ -130,18 +142,35 @@ class DirectoryWriter {
   /**
    * @param {API.BlockWriter} writer
    * @param {UnixFS.Metadata} metadata
-   * @param {API.EncoderConfig<Layout>} config
+   * @param {API.EncoderSettings<Layout>} settings
    * @param {Map<string, UnixFS.DirectoryEntryLink>} entries
    * @param {boolean} closed
    * @param {boolean} closeWriter
+   * @param {boolean} releaseWriter
    */
-  constructor(writer, metadata, config, entries, closed, closeWriter) {
+  constructor(
+    writer,
+    metadata,
+    settings,
+    entries,
+    closed,
+    closeWriter,
+    releaseWriter
+  ) {
     this.writer = writer
     this.metadata = metadata
-    this.config = config
+    this.settings = settings
     this.entries = entries
     this.closeWriter = closeWriter
+    this.releaseWriter = releaseWriter
     this.closed = closed
+  }
+  get writable() {
+    return this
+  }
+
+  getWriter() {
+    return this.writer
   }
 
   /**
@@ -164,6 +193,8 @@ class DirectoryWriter {
   /**
    * @param {object} [options]
    * @param {API.WritableBlockStream} [options.writable]
+   * @param {boolean} [options.releaseLock]
+   * @param {boolean} [options.preventClose]
    * @returns {API.DirectoryWriterView<Layout>}
    */
   fork(options) {
@@ -171,6 +202,6 @@ class DirectoryWriter {
   }
 
   close() {
-    return close(this, this.closeWriter)
+    return close(this, this.closeWriter, this.releaseWriter)
   }
 }

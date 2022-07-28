@@ -11,7 +11,7 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'open'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.EncoderConfig<Layout>
+ * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
  * chunker: Chunker.Chunker
  * layout: Layout
@@ -23,7 +23,7 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'closed'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.EncoderConfig<Layout>
+ * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
  * readonly rootID: Layout.NodeID
  * readonly end?: Task.Fork<void, never>
@@ -37,7 +37,7 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'linked'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.EncoderConfig<Layout>
+ * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
  * readonly link: Layout.Link
  * chunker?: null
@@ -95,7 +95,7 @@ export const update = (message, state) => {
  * @template Layout
  * @param {API.BlockWriter} writer
  * @param {UnixFS.Metadata} metadata
- * @param {API.EncoderConfig} config
+ * @param {API.EncoderSettings} config
  * @returns {State<Layout>}
  */
 export const init = (writer, metadata, config) => {
@@ -266,21 +266,21 @@ export const close = state => {
  * to index in the queue.
  *
  * @param {Layout.Leaf[]} leaves
- * @param {API.EncoderConfig} config
+ * @param {API.EncoderSettings} config
  */
 const encodeLeaves = (leaves, config) =>
   leaves.map(leaf => encodeLeaf(config, leaf, config.fileChunkEncoder))
 
 /**
- * @param {API.EncoderConfig} config
+ * @param {API.EncoderSettings} config
  * @param {Layout.Leaf} leaf
  * @param {API.FileChunkEncoder} encoder
  * @returns {Task.Task<API.EncodedFile, never>}
  */
-const encodeLeaf = function* ({ hasher, createCID }, { id, content }, encoder) {
+const encodeLeaf = function* ({ hasher, linker }, { id, content }, encoder) {
   const bytes = encoder.encode(content ? asUint8Array(content) : EMPTY_BUFFER)
   const hash = yield* Task.wait(hasher.digest(bytes))
-  const cid = createCID(encoder.code, hash)
+  const cid = linker.createLink(encoder.code, hash)
 
   const block = { cid, bytes }
   const link = {
@@ -294,14 +294,14 @@ const encodeLeaf = function* ({ hasher, createCID }, { id, content }, encoder) {
 
 /**
  * @param {Queue.LinkedNode[]} nodes
- * @param {API.EncoderConfig} config
+ * @param {API.EncoderSettings} config
  */
 const encodeBranches = (nodes, config) =>
   nodes.map(node => encodeBranch(config, node))
 
 /**
  * @template Layout
- * @param {API.EncoderConfig<Layout>} config
+ * @param {API.EncoderSettings<Layout>} config
  * @param {Queue.LinkedNode} node
  * @param {UnixFS.Metadata} [metadata]
  * @returns {Task.Task<API.EncodedFile>}
@@ -314,7 +314,7 @@ export const encodeBranch = function* (config, { id, links }, metadata) {
     metadata,
   })
   const hash = yield* Task.wait(Promise.resolve(config.hasher.digest(bytes)))
-  const cid = config.createCID(config.fileEncoder.code, hash)
+  const cid = config.linker.createLink(config.fileEncoder.code, hash)
   const block = { bytes, cid }
   const link = {
     cid,

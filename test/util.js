@@ -123,7 +123,7 @@ export const writeFile = async (target, content) => {
 }
 
 /**
- * @param {UnixFS.FileWriterConfig} fs
+ * @param {UnixFS.FileWriterOptions} fs
  * @param {BlobPart[]} content
  */
 export const importFile = async (fs, content) => {
@@ -135,6 +135,7 @@ export const importFile = async (fs, content) => {
   for await (const chunk of iterate(stream)) {
     file.write(chunk)
   }
+
   return await file.close()
 }
 

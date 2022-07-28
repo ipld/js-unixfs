@@ -3,6 +3,7 @@ import Matrix from "./dataset/convergence_rawdata.js"
 import * as UnixFS from "../src/lib.js"
 import { parseConfig, unpackFile } from "./matrix.js"
 import { CID, collect, iterate, encodeCar, writeFile } from "./util.js"
+import { TransformStream } from "@web-std/stream"
 
 /**
  *
@@ -14,14 +15,15 @@ const createTest = spec =>
    */
   async function test() {
     this.timeout(50000)
-    const { cid, ...config } = await parseConfig(spec)
-    const fs = UnixFS.create(config)
-    const source = await unpackFile(config.url)
+    const { cid, ...settings } = await parseConfig(spec)
+    const { readable, writable } = new TransformStream()
+    const fs = UnixFS.createWriter({ writable, settings })
+    const source = await unpackFile(settings.url)
 
     // await writeFile("fail.txt", iterate(source.stream()))
     // return
 
-    const car = encodeCar(fs.readable)
+    const car = encodeCar(readable)
     const ready = writeFile("expect.car", car)
     // const ready = collect(importer.blocks)
 
