@@ -9,6 +9,7 @@ import * as FixedSize from "../src/file/chunker/fixed.js"
 import * as Rabin from "../src/file/chunker/rabin.js"
 import { sha256 } from "multiformats/hashes/sha2"
 import { write } from "../src/file.js"
+import * as Channel from "../src/writer/channel.js"
 
 const CHUNK_SIZE = 262144
 describe("test file", () => {
@@ -271,5 +272,12 @@ describe("test file", () => {
       contentByteLength: 0,
       dagByteLength: 6,
     })
+  })
+
+  it("write backpressure", async function () {
+    const { readable, writable } = Channel.createBlockChannel({
+      highWaterMark: 16,
+    })
+    const fs = UnixFS.createWriter({ writable })
   })
 })

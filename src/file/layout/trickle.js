@@ -247,9 +247,6 @@ class TrickleNode {
     /** @type {TrickleNode} */
     this.parent = parent || this
   }
-  get children() {
-    return this.directLeaves
-  }
 
   /**
    *

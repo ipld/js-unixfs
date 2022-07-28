@@ -47,7 +47,7 @@ export interface DirectoryWriter {
   remove(name: string): DirectoryWriter
 
   close(): Promise<UnixFS.DirectoryLink>
-  fork(writable?: WritableBlockStream): DirectoryWriter
+  fork(options?: { writable?: WritableBlockStream }): DirectoryWriter
 }
 
 export interface WriteOptions {

@@ -22,6 +22,13 @@ class Channel {
   }
 
   /**
+   * @type {API.Writable<T>}
+   */
+  get writable() {
+    return this.writer
+  }
+
+  /**
    * @param {ReadableStreamController<T>} controller
    */
   start(controller) {
@@ -47,6 +54,7 @@ class Channel {
 /**
  * @template T
  * @implements {API.Writer<T>}
+ * @implements {API.Writable<T>}
  */
 
 class Writer {
@@ -64,8 +72,15 @@ class Writer {
     this.deferred.succeed(undefined)
   }
 
+  get locked() {
+    return false
+  }
   get desiredSize() {
     return this.queue.desiredSize || 0
+  }
+
+  getWriter() {
+    return this
   }
 
   releaseLock() {}

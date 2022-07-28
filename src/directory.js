@@ -105,12 +105,13 @@ export const close = async (state, closeWriter = false) => {
  * @template L
  * @template {API.State<L>} Writer
  * @param {Writer} directoryWriter
- * @param {API.WritableBlockStream} [writable]
+ * @param {object} [options]
+ * @param {API.WritableBlockStream} [options.writable]
  * @returns {API.DirectoryWriterView<L>}
  */
 export const fork = (
   { writer, metadata, config, entries, closeWriter },
-  writable
+  { writable } = {}
 ) =>
   new DirectoryWriter(
     writable ? writable.getWriter() : writer,
@@ -161,11 +162,12 @@ class DirectoryWriter {
   }
 
   /**
-   * @param {API.WritableBlockStream} [writable]
+   * @param {object} [options]
+   * @param {API.WritableBlockStream} [options.writable]
    * @returns {API.DirectoryWriterView<Layout>}
    */
-  fork(writable) {
-    return fork(this, writable)
+  fork(options) {
+    return fork(this, options)
   }
 
   close() {

@@ -1,7 +1,6 @@
 import * as API from "./api.js"
 import * as Channel from "./writer/channel.js"
 import * as File from "./file.js"
-import * as Writer from "./file/writer.js"
 import * as Directory from "./directory.js"
 import * as UnixFS from "./codec.js"
 
@@ -25,7 +24,7 @@ export { create as createDirectoryWriter } from "./directory.js"
 export const createWriter = ({ writable, config = File.defaults() }) => {
   return new FileSystemWriter({
     readable: undefined,
-    writer: writable.getWriter(),
+    writable,
     config,
   })
 }
@@ -36,8 +35,8 @@ export const createWriter = ({ writable, config = File.defaults() }) => {
  * @returns {API.FileSystem<Layout>}
  */
 export const create = (config = File.defaults()) => {
-  const { readable, writer } = Channel.createBlockChannel()
-  return new FileSystem({ readable, writer, config })
+  const { readable, writable } = Channel.createBlockChannel()
+  return new FileSystem({ readable, writable, config })
 }
 
 export const createFile = ({
@@ -45,18 +44,18 @@ export const createFile = ({
   metadata = {},
   preventClose = false,
 } = {}) => {
-  const fs = create(config)
+  const { writable, readable, blocks } = create(config)
 
   const file = File.create(
     {
-      writable: fs,
+      writable,
       config,
       preventClose,
     },
     metadata
   )
 
-  return Object.assign(file, { blocks: fs.blocks })
+  return Object.assign(file, { writable, readable, blocks })
 }
 
 /**
@@ -93,11 +92,11 @@ class FileSystemWriter {
   /**
    * @param {object} options
    * @param {Readable} options.readable
-   * @param {Channel.Writer<UnixFS.Block>} options.writer
+   * @param {API.WritableBlockStream} options.writable
    * @param {API.EncoderConfig<Layout>} options.config
    */
-  constructor({ readable, writer, config }) {
-    this.writer = writer
+  constructor({ readable, writable, config }) {
+    this.writer = writable.getWriter()
 
     this.readable = readable
     this.config = config

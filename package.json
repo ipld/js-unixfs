@@ -23,7 +23,7 @@
     "gen:types": "tsc --build",
     "prepare": "tsc --build",
     "test:web": "playwright-test test/**/*.spec.js --cov && nyc report",
-    "test:node": "c8 --check-coverage --branches 0 --functions 0 --lines 0 mocha test/**/*.spec.js",
+    "test:node": "c8 --check-coverage --branches 93 --functions 80 --lines 93 mocha test/**/*.spec.js",
     "test": "npm run test:node",
     "coverage": "c8 --reporter=html mocha test/test-*.js && npm_config_yes=true npx st -d coverage -p 8080",
     "typecheck": "tsc --build",
@@ -89,7 +89,7 @@
   },
   "c8": {
     "exclude": [
-      "src/unixfs.proto.js",
+      "gen/**",
       "test/**",
       "dist/**"
     ]

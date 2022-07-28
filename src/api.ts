@@ -13,6 +13,7 @@ export type {
   EncoderConfig,
   FileWriter,
   BlockWriter,
+  FileWriterConfig,
   WritableBlockStream,
 } from "./file/api.js"
 export {
@@ -40,7 +41,7 @@ export interface FileSystem<Layout extends unknown = unknown>
 }
 
 export interface FileSystemWriter<L extends unknown = unknown>
-  extends WritableBlockStream {
+  extends FileSystemConfig<L> {
   /**
    * Creates new file writer that will write blocks into the same `BlockQueue`
    * as this `DirectoryWriter`.

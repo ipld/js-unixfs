@@ -123,11 +123,11 @@ export const writeFile = async (target, content) => {
 }
 
 /**
- * @param {UnixFS.FileSystemWriter} writer
+ * @param {UnixFS.FileWriterConfig} fs
  * @param {BlobPart[]} content
  */
-export const importFile = async (writer, content) => {
-  const file = writer.createFileWriter()
+export const importFile = async (fs, content) => {
+  const file = UnixFS.createFileWriter(fs)
   const blob = new Blob(content)
   /** @type {ReadableStream<Uint8Array>} */
   // @ts-ignore

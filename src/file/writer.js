@@ -79,6 +79,7 @@ export const update = (message, state) => {
       return write(state, message.bytes)
     case "link":
       return link(state, message.link)
+    /* c8 ignore next 2 */
     case "block":
       return { state, effect: Task.none() }
     case "close":

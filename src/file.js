@@ -86,6 +86,7 @@ export const close = async (view, closeWriter = false) => {
       await view.state.writer.releaseLock()
     }
     return state.link
+    /* c8 ignore next 5 */
   } else {
     panic(
       `Expected writer to be in 'linked' state after close, but it is in "${state.status}" instead`

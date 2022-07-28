@@ -1,6 +1,11 @@
 export interface Channel<T> {
-  readable: ReadableStream<T>
-  writer: Writer<T>
+  readonly readable: ReadableStream<T>
+  readonly writable: Writable<T>
+}
+
+export interface Writable<T> {
+  readonly locked: boolean
+  getWriter(): Writer<T>
 }
 
 export interface Deferred<T, X> {
