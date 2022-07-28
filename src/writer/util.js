@@ -49,13 +49,6 @@ class Defer {
   fail(error) {
     this.deferred.fail(error)
   }
-
-  /**
-   * @param {any[]} args
-   */
-  then(...args) {
-    return this.promise.then(...args)
-  }
 }
 
 /**

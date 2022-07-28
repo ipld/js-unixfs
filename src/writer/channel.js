@@ -15,10 +15,17 @@ class Channel {
    */
   constructor(queuingStrategy) {
     /** @type {ReadableStream<T>} */
-    this.reader = new ReadableStream(this, queuingStrategy)
+    this.readable = new ReadableStream(this, queuingStrategy)
     /** @type {Writer<T>} */
     // eslint-disable-next-line no-unused-expressions
     this.writer // This is initilaized in start
+  }
+
+  /**
+   * @type {API.Writable<T>}
+   */
+  get writable() {
+    return this.writer
   }
 
   /**
@@ -40,12 +47,14 @@ class Channel {
    * @param {Error} reason
    */
   cancel(reason) {
-    this.writer.error(reason)
+    this.writer.abort(reason)
   }
 }
 
 /**
  * @template T
+ * @implements {API.Writer<T>}
+ * @implements {API.Writable<T>}
  */
 
 class Writer {
@@ -63,15 +72,24 @@ class Writer {
     this.deferred.succeed(undefined)
   }
 
+  get locked() {
+    return false
+  }
   get desiredSize() {
     return this.queue.desiredSize || 0
   }
+
+  getWriter() {
+    return this
+  }
+
+  releaseLock() {}
 
   /**
    * @param {T} item
    * @returns {Promise<void>}
    */
-  enqueue(item) {
+  write(item) {
     this.queue.enqueue(item)
     this.sync()
 
@@ -90,7 +108,7 @@ class Writer {
   /**
    * @param {Error} error
    */
-  error(error) {
+  abort(error) {
     this.queue.error(error)
     this.deferred.fail(error)
   }
@@ -122,7 +140,7 @@ class Writer {
  * This is a simpler wrapper around the stream controller
  * that drops already omitted blocks.
  *
- * @implements {API.Queue<UnixFS.Block>}
+ * @implements {API.Writer<UnixFS.Block>}
  * @extends {Writer<UnixFS.Block>}
  */
 class BlockQueue extends Writer {
@@ -138,7 +156,7 @@ class BlockQueue extends Writer {
   /**
    * @param {UnixFS.Block} block
    */
-  enqueue(block) {
+  write(block) {
     const id = block.cid.toString()
     if (!this.written.has(id)) {
       this.queue.enqueue(block)

@@ -1,4 +1,5 @@
 import type { Chunker } from "./chunker/api.js"
+import type { Writer } from "../writer/api.js"
 import type { LayoutEngine, NodeID } from "./layout/api.js"
 import * as UnixFS from "../unixfs.js"
 import type {
@@ -8,17 +9,31 @@ import type {
   MultihashHasher,
   MultihashDigest,
 } from "../unixfs.js"
+import type { State } from "./writer.js"
 
 export * from "../writer/api.js"
 import * as ChunkerService from "./chunker.js"
 
-export type { Chunker, LayoutEngine, MultihashHasher, MultihashDigest, Block }
-
-export interface FileWriterService<Layout> extends FileWriterConfig<Layout> {
-  blockQueue: BlockQueue
+export type {
+  Chunker,
+  LayoutEngine,
+  MultihashHasher,
+  MultihashDigest,
+  Block,
+  State,
 }
 
-export interface FileWriterConfig<Layout = unknown> {
+export interface FileWriterService<Layout> extends EncoderConfig<Layout> {
+  writer: BlockWriter
+}
+
+export interface WriterConfig<Layout extends unknown = unknown> {
+  readonly config?: EncoderConfig<Layout>
+  readonly metadata?: UnixFS.Metadata
+  readonly preventClose?: boolean
+}
+
+export interface EncoderConfig<Layout extends unknown = unknown> {
   /**
    * Chunker which will be used to split file content into chunks.
    */
@@ -57,13 +72,18 @@ export interface FileWriterConfig<Layout = unknown> {
   createCID: CreateCID
 }
 
-export interface Queue<T> extends ReadableStreamController<T> {
-  readonly desiredSize: number
+export interface FileWriterConfig<Layout = unknown> {
+  writable: WritableBlockStream
 
-  ready: Promise<void>
+  preventClose?: boolean
+  config?: EncoderConfig<Layout>
 }
 
-export interface BlockQueue extends Queue<Block> {}
+export interface BlockWriter extends Writer<Block> {}
+
+export interface WritableBlockStream {
+  getWriter(): BlockWriter
+}
 
 export type FileChunkEncoder =
   | BlockEncoder<PB, Uint8Array>
@@ -163,4 +183,10 @@ export interface LinkedFile {
   readonly status: "linked"
 
   state: UnixFS.FileLink
+}
+
+export interface FileWriter<T extends unknown = unknown> {
+  state: State<T>
+  write(bytes: Uint8Array): Promise<FileWriter<T>>
+  close(): Promise<UnixFS.FileLink>
 }

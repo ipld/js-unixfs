@@ -22,11 +22,9 @@
     "gen:matrix": "node ./scripts/matrix.js",
     "gen:types": "tsc --build",
     "prepare": "tsc --build",
-    "test:web": "playwright-test test/**/*.spec.js",
-    "test:web:coverage": "playwright-test test/**/*.spec.js --cov && nyc report",
-    "test:node": "mocha test/**/*.spec.js",
-    "test:node:coverage": "c8 --check-coverage --branches 100 --functions 100 --lines 100 mocha test/**/*.spec.js",
-    "test": "mocha test/**/*.spec.js",
+    "test:web": "playwright-test test/**/*.spec.js --cov && nyc report",
+    "test:node": "c8 --check-coverage --branches 93 --functions 80 --lines 93 mocha test/**/*.spec.js",
+    "test": "npm run test:node",
     "coverage": "c8 --reporter=html mocha test/test-*.js && npm_config_yes=true npx st -d coverage -p 8080",
     "typecheck": "tsc --build",
     "test:convergence": "mocha test/convergence.js"
@@ -56,13 +54,13 @@
       "types": "./dist/src/lib.d.ts",
       "import": "./src/lib.js"
     },
-    "./src/lib.js": {
-      "types": "./dist/src/lib.d.ts",
-      "import": "./src/lib.js"
-    },
-    "./src/file.js": {
+    "./file": {
       "types": "./dist/src/file.d.ts",
       "import": "./src/file.js"
+    },
+    "./directory": {
+      "types": "./dist/src/directory.d.ts",
+      "import": "./src/directory.js"
     },
     "./src/file/layout/trickle.js": {
       "types": "./dist/src/file/layout/trickle.d.ts",
@@ -91,7 +89,7 @@
   },
   "c8": {
     "exclude": [
-      "src/unixfs.proto.js",
+      "gen/**",
       "test/**",
       "dist/**"
     ]

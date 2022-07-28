@@ -26,24 +26,80 @@ This library provides functionality similar to [ipfs-unixfs-importer][], but it 
 
    Library removes indirection by taking approach similar to [multiformats][] library. Instead of passing chunker and layout config options, you pass chunker / layout / encoder interface implementations.
 
-### Importing a file
+### Usage
 
-To encode a file you simply create file importer and write conten
+You can encode a file as follows
 
 ```js
-import * as UnixFSFile from "@ipld/unixfs/src/file.js"
+import * as UnixFS from "@ipld/unixfs"
 
-const encodeFile = (blob) => {
-  const { writer, ...importer } = FileImporter.createImporter()
-  // Collects data coming out of ReadableStream into array
-  const blocks = collect(importer.blocks)
+// Create a web `TransformStream` with additional filesystem specific interface
+// that allows encoding files and directories into `writable` end and reading
+// IPLD blocks from `readable` end.
+const archive = UnixFS.create()
 
-  // Depending on runtime it may not be async iterable
-  for await (const chunk of blob.stream()) {
-    writer.write(chunk)
-  }
+// Create file writer that can be used to encode UnixFS file.
+const file = UnixFS.createFileWriter(fs)
+// write some content
+file.write(new TextEncoder().encode("hello world"))
+// Finalize file by closing it.
+const { cid } = await file.close()
 
-  return { cid: await writer.close(), blocks: await blocks }
+// close the archive to close underlying block stream.
+archive.close()
+
+// We could encode all this as car file
+encodeCAR({ roots: [cid], blocks: archive.blocks })
+```
+
+If your runtime provides [`TransformStream`][] or a [`WritableStream`][] APIs you can create filesystem writer from the `WritableStream<Block>` directly (this will allow you to control exactly how `readable`/`writable` streams deal with back pressure)
+
+```ts
+import * as UnixFS from "@ipld/unixfs"
+
+const writeFile = async (blob: Blob, writable: WritableStream<Block>) => {
+  const fs = UnixFS.createWriter({ writable })
+  const file = UnixFS.createFileWriter(fs)
+  file.write(new TextEncoder().encode("hello world"))
+  const { cid } = await file.close()
+  fs.close()
+
+  return cid
+}
+```
+
+You can encode (non sharded) directories with provided API as well
+
+```ts
+import * as UnixFS from "@ipld/unixfs"
+
+export const demo = async () => {
+  const fs = UnixFS.create()
+
+  // write a file
+  const file = UnixFS.createFileWriter(file)
+  file.write(new TextEncoder().encode("hello world"))
+  const fileLink = await file.close()
+
+  // create directory and add a file we encoded above
+  const dir = UnixFS.createDirectoryWriter(fs)
+  dir.write("intro.md", fileLink)
+  const dirLink = await dir.close()
+
+  // now wrap above directory with another and also add the same file
+  // there
+  const root = UnixFS.createDirectoryWriter(fs)
+  root.write("user", dirLink)
+  root.write("hello.md", fileLink)
+
+  // Creates following UnixFS structure where intro.md and hello.md link to same
+  // IPFS file.
+  // ./
+  // ./user/intro.md
+  // ./hello.md
+  const rootLink = await root.close()
+  // ...
+  fs.close()
 }
 ```
 
@@ -53,29 +109,27 @@ You can configure importer by passing chunker, layout and encored implementation
 
 ```js
 import * as UnixFS from "@ipld/unixfs"
-import * as UnixFSFile from "@ipld/unixfs/src/file.js"
 import * as Rabin from "@ipld/unixfs/src/file/chunker/rabin.js"
 import * as Trickle from "@ipld/unixfs/src/file/layout/trickle.js"
 import * as RawLeaf from "multiformats/codecs/raw"
 import { sha256 } from "multiformats/hashes/sha2"
 
 const demo = async blob => {
-  const { writer, ...importer } = FileImporter.createImporter(
-    { mode: 0644 },
-    {
-      fileChunker: await Rabin.create({
-        avg: 60000,
-        min: 100,
-        max: 662144,
-      }),
-      fileLayout: Trickle.configure({ maxDirectLeaves: 100 }),
-      // Encode leaf nodes as raw blocks
-      fileChunkEncoder: RawLeaf,
-      smallFileEncoder: RawLeaf,
-      fileEncoder: UnixFS,
-      hasher: sha256,
-    }
-  )
+  const { writer, blocks } = UnixFS.create({
+    fileChunker: await Rabin.create({
+      avg: 60000,
+      min: 100,
+      max: 662144,
+    }),
+    fileLayout: Trickle.configure({ maxDirectLeaves: 100 }),
+    // Encode leaf nodes as raw blocks
+    fileChunkEncoder: RawLeaf,
+    smallFileEncoder: RawLeaf,
+    fileEncoder: UnixFS,
+    hasher: sha256,
+  })
+
+  const file = UnixFS.createFileWriter(fs, { mode: 0644 })
   // ...
 }
 ```
@@ -94,3 +148,5 @@ Unless you explicitly state otherwise, any contribution intentionally submitted 
 [ipfs-unixfs-importer]: https://www.npmjs.com/package/ipfs-unixfs-importer
 [readablestream]: https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream
 [car]: https://ipld.io/specs/transport/car/carv1/
+[`transformstream`]: https://developer.mozilla.org/en-US/docs/Web/API/TransformStream
+[`writablestream`]: https://developer.mozilla.org/en-US/docs/Web/API/WritableStream

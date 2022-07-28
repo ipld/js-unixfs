@@ -1,8 +1,7 @@
 import * as Task from "actor"
 import * as API from "./api.js"
 import * as Layout from "./layout/api.js"
-import * as UnixFS from "../lib.js"
-import * as Channel from "../writer/channel.js"
+import * as UnixFS from "../codec.js"
 import * as Chunker from "./chunker.js"
 import { EMPTY_BUFFER, panic, unreachable } from "../writer/util.js"
 import * as Queue from "./layout/queue.js"
@@ -12,8 +11,8 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'open'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.FileWriterConfig<Layout>
- * readonly blockQueue: API.BlockQueue
+ * readonly config: API.EncoderConfig<Layout>
+ * readonly writer: API.BlockWriter
  * chunker: Chunker.Chunker
  * layout: Layout
  * nodeQueue: Queue.Queue
@@ -24,8 +23,8 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'closed'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.FileWriterConfig<Layout>
- * readonly blockQueue: API.BlockQueue
+ * readonly config: API.EncoderConfig<Layout>
+ * readonly writer: API.BlockWriter
  * readonly rootID: Layout.NodeID
  * readonly end?: Task.Fork<void, never>
  * chunker?: null
@@ -38,8 +37,8 @@ import * as Queue from "./layout/queue.js"
  * @typedef {{
  * readonly status: 'linked'
  * readonly metadata: UnixFS.Metadata
- * readonly config: API.FileWriterConfig<Layout>
- * readonly blockQueue: API.BlockQueue
+ * readonly config: API.EncoderConfig<Layout>
+ * readonly writer: API.BlockWriter
  * readonly link: Layout.Link
  * chunker?: null
  * layout?: null
@@ -80,6 +79,7 @@ export const update = (message, state) => {
       return write(state, message.bytes)
     case "link":
       return link(state, message.link)
+    /* c8 ignore next 2 */
     case "block":
       return { state, effect: Task.none() }
     case "close":
@@ -93,17 +93,17 @@ export const update = (message, state) => {
 
 /**
  * @template Layout
+ * @param {API.BlockWriter} writer
  * @param {UnixFS.Metadata} metadata
- * @param {Channel.Queue<UnixFS.Block>} blockQueue
- * @param {API.FileWriterConfig} config
+ * @param {API.EncoderConfig} config
  * @returns {State<Layout>}
  */
-export const init = (metadata, blockQueue, config) => {
+export const init = (writer, metadata, config) => {
   return {
     status: "open",
     metadata,
     config,
-    blockQueue,
+    writer,
     chunker: Chunker.open({ chunker: config.chunker }),
     layout: config.fileLayout.open(),
     // Note: Writing in large slices e.g. 1GiB at a time creates large queues
@@ -192,7 +192,7 @@ export const link = (state, { id, link, block }) => {
     state: newState,
     effect: Task.listen({
       link: Task.effects(tasks),
-      block: writeBlock(state.blockQueue, block),
+      block: writeBlock(state.writer, block),
       end,
     }),
   }
@@ -266,13 +266,13 @@ export const close = state => {
  * to index in the queue.
  *
  * @param {Layout.Leaf[]} leaves
- * @param {API.FileWriterConfig} config
+ * @param {API.EncoderConfig} config
  */
 const encodeLeaves = (leaves, config) =>
   leaves.map(leaf => encodeLeaf(config, leaf, config.fileChunkEncoder))
 
 /**
- * @param {API.FileWriterConfig} config
+ * @param {API.EncoderConfig} config
  * @param {Layout.Leaf} leaf
  * @param {API.FileChunkEncoder} encoder
  * @returns {Task.Task<API.EncodedFile, never>}
@@ -294,14 +294,14 @@ const encodeLeaf = function* ({ hasher, createCID }, { id, content }, encoder) {
 
 /**
  * @param {Queue.LinkedNode[]} nodes
- * @param {API.FileWriterConfig} config
+ * @param {API.EncoderConfig} config
  */
 const encodeBranches = (nodes, config) =>
   nodes.map(node => encodeBranch(config, node))
 
 /**
  * @template Layout
- * @param {API.FileWriterConfig<Layout>} config
+ * @param {API.EncoderConfig<Layout>} config
  * @param {Queue.LinkedNode} node
  * @param {UnixFS.Metadata} [metadata]
  * @returns {Task.Task<API.EncodedFile>}
@@ -318,30 +318,24 @@ export const encodeBranch = function* (config, { id, links }, metadata) {
   const block = { bytes, cid }
   const link = {
     cid,
-    contentByteLength: links.reduce(
-      (total, n) => total + n.contentByteLength,
-      0
-    ),
-    dagByteLength: links.reduce(
-      (total, n) => total + n.dagByteLength,
-      bytes.byteLength
-    ),
+    contentByteLength: UnixFS.cumulativeContentByteLength(links),
+    dagByteLength: UnixFS.cumulativeDagByteLength(bytes, links),
   }
 
   return { id, block, link }
 }
 
 /**
- * @param {API.BlockQueue} blockQueue
+ * @param {API.BlockWriter} writer
  * @param {UnixFS.Block} block
  * @returns {Task.Task<void, never>}
  */
 
-export const writeBlock = function* (blockQueue, block) {
-  if (blockQueue.desiredSize <= 0) {
-    yield* Task.wait(blockQueue.ready)
+export const writeBlock = function* (writer, block) {
+  if ((writer.desiredSize || 0) <= 0) {
+    yield* Task.wait(writer.ready)
   }
-  blockQueue.enqueue(block)
+  writer.write(block)
 }
 
 /**

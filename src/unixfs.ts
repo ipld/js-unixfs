@@ -221,12 +221,14 @@ export type Directory = FlatDirectory | ShardedDirectory
  */
 export interface FlatDirectory {
   readonly type: NodeType.Directory
-  readonly entries: ReadonlyArray<DirectoryLink>
+  readonly entries: ReadonlyArray<DirectoryEntryLink>
 
   readonly metadata?: Metadata
 }
 
-export type DirectoryLink = NamedDAGLink<File> | NamedDAGLink<Directory>
+export type DirectoryEntryLink = NamedDAGLink<File> | NamedDAGLink<Directory>
+
+export type DirectoryLink = DAGLink<Directory>
 
 export interface NamedDAGLink<T> extends DAGLink<T> {
   readonly name: string
