@@ -11,7 +11,7 @@ import * as Balanced from "./file/layout/balanced.js"
 export * from "./file/api.js"
 
 /**
- * @returns {API.EncoderConfig}
+ * @returns {API.EncoderSettings}
  */
 export const defaults = () => ({
   chunker: FixedSize,
@@ -20,13 +20,13 @@ export const defaults = () => ({
   fileEncoder: UnixFS,
   fileLayout: Balanced.withWidth(174),
   hasher: sha256,
-  createCID: CID.createV1,
+  linker: { createLink: CID.createV1 },
 })
 
 /**
  * @template {unknown} Layout
- * @param {Partial<API.EncoderConfig<Layout>>} config
- * @returns {API.EncoderConfig<Layout>}
+ * @param {Partial<API.EncoderSettings<Layout>>} config
+ * @returns {API.EncoderSettings<Layout>}
  */
 export const configure = config => ({
   ...defaults(),
@@ -47,24 +47,17 @@ export const UnixFSRawLeaf = {
 
 /**
  * @template Layout
- * @param {API.FileWriterConfig<Layout>} options
- * @param {UnixFS.Metadata} [metadata]
- * @returns {API.FileWriter<Layout>}
+ * @param {API.Options<Layout>} options
+ * @returns {API.View<Layout>}
  */
-export const create = (
-  { writable, preventClose = true, config = defaults() },
-  metadata = {}
-) =>
-  new FileWriterView(
-    Writer.init(writable.getWriter(), metadata, configure(config)),
-    !preventClose
-  )
+export const create = ({ writer, metadata = {}, settings = defaults() }) =>
+  new FileWriterView(Writer.init(writer, metadata, configure(settings)))
 
 /**
  * @template T
- * @param {API.FileWriter<T>} view
+ * @param {API.View<T>} view
  * @param {Uint8Array} bytes
- * @return {Promise<API.FileWriter<T>>}
+ * @return {Promise<API.View<T>>}
  */
 
 export const write = async (view, bytes) => {
@@ -74,16 +67,20 @@ export const write = async (view, bytes) => {
 
 /**
  * @template T
- * @param {API.FileWriter<T>} view
+ * @param {API.View<T>} view
+ * @param {API.CloseOptions} [options]
  */
-export const close = async (view, closeWriter = false) => {
+export const close = async (
+  view,
+  { releaseLock = false, closeWriter = false } = {}
+) => {
   await perform(view, Task.send({ type: "close" }))
   const { state } = view
   if (state.status === "linked") {
     if (closeWriter) {
       await view.state.writer.close()
-    } else {
-      await view.state.writer.releaseLock()
+    } else if (releaseLock) {
+      view.state.writer.releaseLock()
     }
     return state.link
     /* c8 ignore next 5 */
@@ -96,7 +93,7 @@ export const close = async (view, closeWriter = false) => {
 
 /**
  * @template T
- * @param {API.FileWriter<T>} view
+ * @param {API.View<T>} view
  * @param {Task.Effect<Writer.Message>} effect
  */
 const perform = (view, effect) =>
@@ -110,28 +107,33 @@ const perform = (view, effect) =>
 
 /**
  * @template Layout
- * @implements {API.FileWriter<Layout>}
+ * @implements {API.View<Layout>}
  */
 class FileWriterView {
   /**
    * @param {Writer.State<Layout>} state
-   * @param {boolean} closeWriter
    */
-  constructor(state, closeWriter) {
+  constructor(state) {
     this.state = state
-    this.closeWriter = closeWriter
+  }
+  get writer() {
+    return this.state.writer
+  }
+  get settings() {
+    return this.state.config
   }
   /**
    * @param {Uint8Array} bytes
-   * @returns {Promise<API.FileWriter<Layout>>}
+   * @returns {Promise<API.View<Layout>>}
    */
   write(bytes) {
     return write(this, bytes)
   }
   /**
+   * @param {API.CloseOptions} [options]
    * @returns {Promise<UnixFS.FileLink>}
    */
-  close() {
-    return close(this, this.closeWriter)
+  close(options) {
+    return close(this, options)
   }
 }

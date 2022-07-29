@@ -29,7 +29,7 @@ const base = new URL("./dataset/testdata/", import.meta.url)
  * url: URL
  * chunkerConfig: string
  * chunker: API.Chunker
- * createCID: API.CreateCID
+ * linker: API.Linker
  * trickle: boolean
  * rawLeaves: boolean
  * fileChunkEncoder: API.FileChunkEncoder
@@ -64,7 +64,9 @@ export const parseConfig = async input => {
     fileEncoder: UnixFS,
     hasher: sha256,
     fileLayout: input.trickle ? Trickle : Balanced,
-    createCID: input.cidVersion === 0 ? createCIDv0 : CID.createV1,
+    linker: {
+      createLink: input.cidVersion === 0 ? createCIDv0 : CID.createV1,
+    },
     chunkerConfig: input.chunker,
     chunker: await parseChunker(input.chunker),
     cid: CID.parse(input.cid),

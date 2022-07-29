@@ -1,191 +1,116 @@
 import * as API from "./api.js"
-import * as Channel from "./writer/channel.js"
 import * as File from "./file.js"
 import * as Directory from "./directory.js"
-import * as UnixFS from "./codec.js"
 
 export * from "./api.js"
 
 export { encode, decode, NodeType, code } from "./codec.js"
 export {
   create as createFileWriter,
+  close as closeFile,
+  write,
   configure,
   defaults,
   UnixFSLeaf,
   UnixFSRawLeaf,
 } from "./file.js"
-export { create as createDirectoryWriter } from "./directory.js"
+export {
+  create as createDirectoryWriter,
+  close as closeDirectory,
+  fork as forkDirectory,
+  set,
+  remove,
+} from "./directory.js"
 
 /**
  * @template [Layout=unknown]
- * @param {API.FileSystemConfig<Layout>} config
- * @returns {API.FileSystemWriter<Layout>}
+ * @param {API.Options<Layout>} options
+ * @returns {API.View<Layout>}
  */
-export const createWriter = ({ writable, config = File.defaults() }) => {
-  return new FileSystemWriter({
-    readable: undefined,
-    writable,
-    config,
+export const createWriter = ({ writable, settings = File.defaults() }) =>
+  new FileSystemWriter({
+    writer: writable.getWriter(),
+    settings,
   })
-}
 
 /**
- * @template [Layout=unknown]
- * @param {API.EncoderConfig<Layout>} [config]
- * @returns {API.FileSystem<Layout>}
+ * @template {{writer:API.BlockWriter}} View
+ * @param {View} view
+ * @param {API.CloseOptions} [options]
  */
-export const create = (config = File.defaults()) => {
-  const { readable, writable } = Channel.createBlockChannel()
-  return new FileSystem({ readable, writable, config })
-}
+export const close = async (
+  view,
+  { releaseLock = true, closeWriter = true } = {}
+) => {
+  if (closeWriter) {
+    await view.writer.close()
+  } else if (releaseLock) {
+    view.writer.releaseLock()
+  }
 
-export const createFile = ({
-  config = File.defaults(),
-  metadata = {},
-  preventClose = false,
-} = {}) => {
-  const { writable, readable, blocks } = create(config)
-
-  const file = File.create(
-    {
-      writable,
-      config,
-      preventClose,
-    },
-    metadata
-  )
-
-  return Object.assign(file, { writable, readable, blocks })
+  return view
 }
 
 /**
  * @template [Layout=unknown]
- * @param {object} [options]
- * @param {API.EncoderConfig<Layout>} [options.config]
- * @param {UnixFS.Metadata} [options.metadata]
- * @param {boolean} [options.preventClose]
- * @returns
- */
-export const createDirectory = ({
-  config = File.defaults(),
-  metadata = {},
-  preventClose = false,
-} = {}) => {
-  const { blocks, writable, readable } = create(config)
-  const directory = Directory.create(
-    {
-      writable,
-      config,
-      preventClose,
-    },
-    metadata
-  )
-
-  return Object.assign(directory, { blocks, writable, readable })
-}
-
-/**
- * @template {ReadableStream<UnixFS.Block>|undefined} Readable
- * @template [Layout=unknown]
+ * @implemets {API.View<Layout>}
  */
 class FileSystemWriter {
   /**
    * @param {object} options
-   * @param {Readable} options.readable
-   * @param {API.WritableBlockStream} options.writable
-   * @param {API.EncoderConfig<Layout>} options.config
+   * @param {API.BlockWriter} options.writer
+   * @param {Partial<API.EncoderSettings<Layout>>} options.settings
    */
-  constructor({ readable, writable, config }) {
-    this.writer = writable.getWriter()
-
-    this.readable = readable
-    this.config = config
-  }
-
-  /** @type {API.WritableBlockStream} */
-  get writable() {
-    return this
-  }
-
-  // Currently `getWriter` / `releaseLock` methods mimic `WritableStream` /
-  // `WritableStreamDefaultWriter` APIs that allow multiple writers. Current
-  // implementation will not allow writers across (worker) threads but support
-  // for that could be added in the future e.g. `getWriter()` could create new
-  // `TransformStream` and pipe blocks from `ReadableStream` into `this.writer`.
-  getWriter() {
-    return this.writer
-  }
-  releaseLock() {}
-
-  /**
-   * @template [L=unknown]
-   * @param {API.WriterConfig<L|Layout>} [config]
-   */
-  createFileWriter({ config = this.config, metadata = {}, preventClose } = {}) {
-    return File.create(
-      {
-        writable: this.writable,
-        config,
-        preventClose,
-      },
-      metadata
-    )
+  constructor({ writer, settings }) {
+    this.writer = writer
+    this.settings = File.configure(settings)
   }
 
   /**
    * @template [L=unknown]
-   * @param {API.WriterConfig<L|Layout>} [config]
+   * @param {API.WriterOptions<L|Layout>} [config]
    */
-  createDirectoryWriter({
-    config = this.config,
-    preventClose,
-    metadata = {},
-  } = {}) {
-    return Directory.create(
-      {
-        writable: this.writable,
-        config,
-        preventClose,
-      },
-      metadata
-    )
+  createFileWriter({ settings = this.settings, metadata } = {}) {
+    return File.create({
+      writer: this.writer,
+      settings,
+      metadata,
+    })
   }
 
-  async close() {
-    await this.writer.close()
-  }
-}
-
-/**
- * @template [Layout=unknown]
- * @extends {FileSystemWriter<ReadableStream<UnixFS.Block>, Layout>}
- * @implements {API.FileSystem<Layout>}
- */
-class FileSystem extends FileSystemWriter {
   /**
-   * @type {AsyncIterableIterator<UnixFS.Block>}
+   * @template [L=unknown]
+   * @param {API.WriterOptions<L|Layout>} [config]
    */
-  get blocks() {
-    return blocks(this)
+  createDirectoryWriter({ settings = this.settings, metadata } = {}) {
+    return Directory.create({
+      writer: this.writer,
+      settings,
+      metadata,
+    })
+  }
+
+  /**
+   * @param {API.CloseOptions} [options]
+   */
+  close(options) {
+    return close(this, options)
   }
 }
+
+// BlockSizeLimit specifies the maximum size an imported block can have.
+// @see https://github.com/ipfs/go-unixfs/blob/68c015a6f317ed5e21a4870f7c423a4b38b90a96/importer/helpers/helpers.go#L7-L8
+export const BLOCK_SIZE_LIMIT = 1048576 // 1 MB
+export const defaultCapacity = BLOCK_SIZE_LIMIT * 100
 
 /**
- * @param {API.FileSystem} fs
+ * Creates `QueuingStrategy` that can fit blocks with total size up to given
+ * byteLength.
+ *
+ * @param {number} byteLength
+ * @returns {Required<QueuingStrategy<API.Block>>}
  */
-
-export const blocks = async function* ({ readable }) {
-  const reader = readable.getReader()
-  try {
-    while (true) {
-      const next = await reader.read()
-      if (next.done) {
-        break
-      } else {
-        yield next.value
-      }
-    }
-  } finally {
-    reader.releaseLock()
-  }
-}
+export const withCapacity = (byteLength = defaultCapacity) => ({
+  highWaterMark: byteLength,
+  size: block => block.bytes.length,
+})

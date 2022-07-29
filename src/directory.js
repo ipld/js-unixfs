@@ -8,33 +8,28 @@ export const defaults = File.defaults
 
 /**
  * @template [Layout=unknown]
- * @param {API.DirectoryConfig<Layout>} config
- * @param {API.Metadata} metadata
- * @returns {API.DirectoryWriterView<Layout>}
+ * @param {API.Options<Layout>} config
+ * @returns {API.View<Layout>}
  */
-export const create = (
-  { writable, preventClose = true, config = defaults() },
-  metadata = {}
-) =>
-  new DirectoryWriter(
-    writable.getWriter(),
+export const create = ({ writer, settings = defaults(), metadata = {} }) =>
+  new DirectoryWriter({
+    writer,
     metadata,
-    config,
-    new Map(),
-    false,
-    !preventClose
-  )
+    settings,
+    entries: new Map(),
+    closed: false,
+  })
 
 /**
- * @template {API.State} Writer
- * @param {Writer} writer
+ * @template {unknown} L
+ * @template {{ state: API.State<L> }} View
+ * @param {View} view
  * @param {string} name
- * @param {UnixFS.FileLink | UnixFS.DirectoryLink} link
+ * @param {API.EntryLink} link
  * @param {API.WriteOptions} [options]
- * @returns {Writer}
  */
-export const write = (writer, name, link, { overwrite = false } = {}) => {
-  const writable = asWritable(writer)
+export const set = (view, name, link, { overwrite = false } = {}) => {
+  const writable = asWritable(view.state)
   if (name.includes("/")) {
     throw new Error(
       `Directory entry name "${name}" contains forbidden "/" character`
@@ -43,21 +38,21 @@ export const write = (writer, name, link, { overwrite = false } = {}) => {
   if (!overwrite && writable.entries.has(name)) {
     throw new Error(`Directory already contains entry with name "${name}"`)
   } else {
-    const { cid, dagByteLength } = link
-    writable.entries.set(name, { name, cid, dagByteLength })
-    return writable
+    writable.entries.set(name, link)
+    return view
   }
 }
 
 /**
- * @template {API.State} Writer
- * @param {Writer} writer
+ * @template {unknown} L
+ * @template {{ state: API.State<L> }} View
+ * @param {View} view
  * @param {string} name
- * @returns {Writer}
  */
-export const remove = (writer, name) => {
-  asWritable(writer).entries.delete(name)
-  return writer
+export const remove = (view, name) => {
+  const writer = asWritable(view.state)
+  writer.entries.delete(name)
+  return view
 }
 
 /**
@@ -76,72 +71,96 @@ const asWritable = writer => {
 }
 
 /**
- * @template Layout
- * @param {API.State<Layout>} state
+ * @template {unknown} Layout
+ * @param {{ state: API.State<Layout> }} view
+ * @param {API.CloseOptions} [options]
  * @returns {Promise<UnixFS.DirectoryLink>}
  */
-export const close = async (state, closeWriter = false) => {
-  const { writer, config, entries, metadata } = asWritable(state)
-  state.closed = true
-  const links = [...entries.values()]
-  const node = UnixFS.createFlatDirectory(links, metadata)
+export const close = async (
+  view,
+  { closeWriter = false, releaseLock = false } = {}
+) => {
+  const { writer, settings, metadata } = asWritable(view.state)
+  view.state.closed = true
+  const entries = [...links(view)]
+  const node = UnixFS.createFlatDirectory(entries, metadata)
   const bytes = UnixFS.encodeDirectory(node)
-  const digest = await config.hasher.digest(bytes)
-  const cid = config.createCID(UnixFS.code, digest)
-  await writer.write({ cid, bytes })
+  const digest = await settings.hasher.digest(bytes)
+  const cid = settings.linker.createLink(UnixFS.code, digest)
+
+  // we make sure that writer has some capacity for this write. If it
+  // does not we await.
+  if ((writer.desiredSize || 0) <= 0) {
+    await writer.ready
+  }
+  // once writer has some capacity we write a block, however we do not
+  // await completion as we don't care when it's taken off the stream.
+  writer.write({ cid, bytes })
+
   if (closeWriter) {
     await writer.close()
-  } else {
+  } else if (releaseLock) {
     writer.releaseLock()
   }
 
   return {
     cid,
-    dagByteLength: UnixFS.cumulativeDagByteLength(bytes, links),
+    dagByteLength: UnixFS.cumulativeDagByteLength(bytes, entries),
   }
 }
 
 /**
- * @template L
- * @template {API.State<L>} Writer
- * @param {Writer} directoryWriter
- * @param {object} [options]
- * @param {API.WritableBlockStream} [options.writable]
- * @returns {API.DirectoryWriterView<L>}
+ * @template {unknown} Layout
+ * @param {{ state: API.State<Layout> }} view
+ */
+export const links = function* ({ state }) {
+  for (const [name, { dagByteLength, cid }] of state.entries) {
+    yield { name, dagByteLength, cid }
+  }
+}
+
+/**
+ * @template L1, L2
+ * @param {API.View<L1>} state
+ * @param {Partial<API.Options<L1|L2>>} [options]
+ * @returns {API.View<L1|L2>}
  */
 export const fork = (
-  { writer, metadata, config, entries, closeWriter },
-  { writable } = {}
+  { state },
+  {
+    writer = state.writer,
+    metadata = state.metadata,
+    settings = state.settings,
+  } = {}
 ) =>
-  new DirectoryWriter(
-    writable ? writable.getWriter() : writer,
+  new DirectoryWriter({
+    writer,
     metadata,
-    config,
-    new Map(entries.entries()),
-    false,
-    closeWriter
-  )
+    settings,
+    entries: new Map(state.entries.entries()),
+    closed: false,
+  })
 
 /**
  * @template [Layout=unknown]
- * @implements {API.DirectoryWriterView<Layout>}
+ * @implements {API.View<Layout>}
  */
 class DirectoryWriter {
   /**
-   * @param {API.BlockWriter} writer
-   * @param {UnixFS.Metadata} metadata
-   * @param {API.EncoderConfig<Layout>} config
-   * @param {Map<string, UnixFS.DirectoryEntryLink>} entries
-   * @param {boolean} closed
-   * @param {boolean} closeWriter
+   * @param {API.State<Layout>} state
    */
-  constructor(writer, metadata, config, entries, closed, closeWriter) {
-    this.writer = writer
-    this.metadata = metadata
-    this.config = config
-    this.entries = entries
-    this.closeWriter = closeWriter
-    this.closed = closed
+  constructor(state) {
+    this.state = state
+  }
+  get writer() {
+    return this.state.writer
+  }
+  get settings() {
+    return this.state.settings
+  }
+
+  links() {
+    return links(this)
   }
 
   /**
@@ -150,8 +169,8 @@ class DirectoryWriter {
    * @param {API.WriteOptions} [options]
    */
 
-  write(name, link, options) {
-    return write(this, name, link, options)
+  set(name, link, options) {
+    return set(this, name, link, options)
   }
 
   /**
@@ -162,15 +181,32 @@ class DirectoryWriter {
   }
 
   /**
-   * @param {object} [options]
-   * @param {API.WritableBlockStream} [options.writable]
-   * @returns {API.DirectoryWriterView<Layout>}
+   * @template L
+   * @param {Partial<API.Options<L>>} [options]
+   * @returns {API.View<Layout|L>}
    */
   fork(options) {
     return fork(this, options)
   }
 
-  close() {
-    return close(this, this.closeWriter)
+  /**
+   * @param {API.CloseOptions} [options]
+   * @returns {Promise<UnixFS.DirectoryLink>}
+   */
+  close(options) {
+    return close(this, options)
+  }
+
+  entries() {
+    return this.state.entries.entries()
+  }
+  /**
+   * @param {string} name
+   */
+  has(name) {
+    return this.state.entries.has(name)
+  }
+  get size() {
+    return this.state.entries.size
   }
 }

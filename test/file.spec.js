@@ -8,20 +8,20 @@ import * as Balanced from "../src/file/layout/balanced.js"
 import * as FixedSize from "../src/file/chunker/fixed.js"
 import * as Rabin from "../src/file/chunker/rabin.js"
 import { sha256 } from "multiformats/hashes/sha2"
-import { write } from "../src/file.js"
-import * as Channel from "../src/writer/channel.js"
+import { TransformStream } from "@web-std/stream"
 
 const CHUNK_SIZE = 262144
 describe("test file", () => {
   it("basic file", async function () {
     this.timeout(30000)
     const content = encodeUTF8("this file does not have much content\n")
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
 
-    const fs = UnixFS.create()
-    const file = UnixFS.createFileWriter(fs)
+    const file = UnixFS.createFileWriter({ writer })
     await file.write(content)
     const link = await file.close()
-    fs.close()
+    writer.close()
 
     assert.equal(link.contentByteLength, 37)
     assert.equal(link.dagByteLength, 45)
@@ -30,8 +30,8 @@ describe("test file", () => {
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
     )
 
-    const { blocks } = fs
-    const read = await blocks.next()
+    const blocks = readable.getReader()
+    const read = await blocks.read()
     if (read.done) {
       assert.fail("expected to get a block")
     }
@@ -42,13 +42,20 @@ describe("test file", () => {
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
     )
 
-    const end = await blocks.next()
+    const end = await blocks.read()
     assert.deepEqual(end, { done: true, value: undefined })
   })
 
   it("splits into 3 chunks", async function () {
-    const fs = UnixFS.create()
-    const file = UnixFS.createFileWriter(fs)
+    const { readable, writable } = new TransformStream(
+      {},
+      {},
+      {
+        highWaterMark: 5,
+      }
+    )
+    const writer = writable.getWriter()
+    const file = UnixFS.createFileWriter({ writer })
     file.write(new Uint8Array(CHUNK_SIZE).fill(1))
     file.write(new Uint8Array(CHUNK_SIZE).fill(2))
     file.write(new Uint8Array(CHUNK_SIZE).fill(3))
@@ -63,8 +70,8 @@ describe("test file", () => {
       ),
     })
 
-    const { blocks } = fs
-    const r1 = await blocks.next()
+    const blocks = readable.getReader()
+    const r1 = await blocks.read()
     if (r1.done) {
       assert.fail("expected to get a block")
     }
@@ -74,7 +81,7 @@ describe("test file", () => {
       CID.parse("bafybeihhsdoupgd3fnl3e3367ymsanmikafpllldsdt37jzyoh6nuatowe")
     )
 
-    const r2 = await blocks.next()
+    const r2 = await blocks.read()
     if (r2.done) {
       assert.fail("expected to get a block")
     }
@@ -83,7 +90,7 @@ describe("test file", () => {
       CID.parse("bafybeief3dmadxfymhhhrflqytqmlhlz47w6glaxvyzmm6s6tpfb6izzee")
     )
 
-    const r3 = await blocks.next()
+    const r3 = await blocks.read()
     if (r3.done) {
       assert.fail("expected to get a block")
     }
@@ -92,21 +99,25 @@ describe("test file", () => {
       CID.parse("bafybeihznihf5g5ibdyoawn7uu3inlyqrxjv63lt6lop6h3w6rzwrp67a4")
     )
 
-    await fs.close()
+    await writer.close()
   })
 
   it("--chunker=size-65535 --trickle=false --raw-leaves=false --cid-version=1", async () => {
     const chunkSize = 65535
-    const fs = UnixFS.create({
+    const { readable, writable } = new TransformStream()
+    const settings = {
       chunker: FixedSize.withMaxChunkSize(chunkSize),
       fileChunkEncoder: UnixFS.UnixFSLeaf,
       smallFileEncoder: UnixFS.UnixFSLeaf,
       fileLayout: Balanced,
-      createCID: CID.createV1,
+      linker: { createLink: CID.createV1 },
       hasher: sha256,
       fileEncoder: UnixFS,
-    })
-    const file = UnixFS.createFileWriter(fs)
+    }
+    const writer = writable.getWriter()
+    collect(readable)
+
+    const file = UnixFS.createFileWriter({ writer, settings })
 
     const size = Math.round(chunkSize * 2.2)
     const FRAME = Math.round(size / 10)
@@ -127,7 +138,7 @@ describe("test file", () => {
       dagByteLength: 144372,
     })
 
-    await fs.close()
+    await writer.close()
   })
 
   it("chunks with rabin chunker", async function () {
@@ -137,15 +148,19 @@ describe("test file", () => {
     })
     const chunker = await Rabin.create()
 
-    const fs = UnixFS.create(UnixFS.configure({ chunker }))
-    const collector = collect(fs.readable)
-    const file = UnixFS.createFileWriter(fs)
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+
+    const settings = UnixFS.configure({ chunker })
+
+    const collector = collect(readable)
+    const file = UnixFS.createFileWriter({ writer, settings })
 
     for await (const slice of content) {
       file.write(slice)
     }
     const link = await file.close()
-    fs.close()
+    writer.close()
     const blocks = await collector
 
     assert.deepEqual(
@@ -161,22 +176,22 @@ describe("test file", () => {
     const content = hashrecur({
       byteLength: CHUNK_SIZE * 2,
     })
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const settings = UnixFS.configure({
+      chunker: FixedSize.withMaxChunkSize(1300),
+      fileLayout: Trickle,
+      fileChunkEncoder: UnixFS.UnixFSRawLeaf,
+    })
 
-    const fs = UnixFS.create(
-      UnixFS.configure({
-        chunker: FixedSize.withMaxChunkSize(1300),
-        fileLayout: Trickle,
-        fileChunkEncoder: UnixFS.UnixFSRawLeaf,
-      })
-    )
-    const file = UnixFS.createFileWriter(fs)
-    const collector = collect(fs.readable)
+    const file = UnixFS.createFileWriter({ writer, settings })
+    const collector = collect(readable)
 
     for await (const slice of content) {
       file.write(slice)
     }
     const link = await file.close()
-    fs.close()
+    writer.close()
     const blocks = await collector
 
     assert.deepEqual(link, {
@@ -193,23 +208,24 @@ describe("test file", () => {
     const content = hashrecur({
       byteLength: CHUNK_SIZE * 2,
     })
+    const { readable, writable } = new TransformStream()
 
-    const fs = UnixFS.create(
-      UnixFS.configure({
-        chunker: FixedSize.withMaxChunkSize(100000),
-        fileLayout: Trickle.configure({ maxDirectLeaves: 5 }),
-        fileChunkEncoder: UnixFS.UnixFSRawLeaf,
-      })
-    )
-    const collector = collect(fs.readable)
-    const file = UnixFS.createFileWriter(fs)
+    const writer = writable.getWriter()
+    const settings = UnixFS.configure({
+      chunker: FixedSize.withMaxChunkSize(100000),
+      fileLayout: Trickle.configure({ maxDirectLeaves: 5 }),
+      fileChunkEncoder: UnixFS.UnixFSRawLeaf,
+    })
+
+    const blocks = collect(readable)
+    const file = UnixFS.createFileWriter({ writer, settings })
 
     for await (const slice of content) {
       file.write(slice)
     }
     const link = await file.close()
-    fs.close()
-    const blocks = await collector
+    writer.close()
+    await blocks
 
     assert.deepEqual(link, {
       cid: CID.parse(
@@ -227,24 +243,24 @@ describe("test file", () => {
     const leafCount = 42
 
     const content = hashrecur({ byteLength: chunkSize * leafCount })
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
 
-    const fs = UnixFS.create(
-      UnixFS.configure({
-        chunker: FixedSize.withMaxChunkSize(chunkSize),
-        fileLayout: Trickle.configure({ maxDirectLeaves: maxLeaves }),
-        fileChunkEncoder: UnixFS.UnixFSRawLeaf,
-      })
-    )
+    const settings = UnixFS.configure({
+      chunker: FixedSize.withMaxChunkSize(chunkSize),
+      fileLayout: Trickle.configure({ maxDirectLeaves: maxLeaves }),
+      fileChunkEncoder: UnixFS.UnixFSRawLeaf,
+    })
 
-    const collector = collect(fs.readable)
-    const file = UnixFS.createFileWriter(fs)
+    const blocks = collect(readable)
+    const file = UnixFS.createFileWriter({ writer, settings })
 
     for await (const slice of content) {
       file.write(slice)
     }
     const link = await file.close()
-    fs.close()
-    const blocks = await collector
+    writer.close()
+    await blocks
 
     assert.deepEqual(link, {
       cid: CID.parse(
@@ -256,14 +272,15 @@ describe("test file", () => {
   })
 
   it("write empty with defaults", async function () {
-    const fs = UnixFS.create()
-    const file = UnixFS.createFileWriter(fs)
-    const collector = collect(fs.readable)
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const file = UnixFS.createFileWriter({ writer })
+    const blocks = collect(readable)
 
     file.write(new Uint8Array())
     const link = await file.close()
-    fs.close()
-    const blocks = await collector
+    writer.close()
+    await blocks
 
     assert.deepEqual(link, {
       cid: CID.parse(
@@ -274,10 +291,61 @@ describe("test file", () => {
     })
   })
 
-  it("write backpressure", async function () {
-    const { readable, writable } = Channel.createBlockChannel({
-      highWaterMark: 16,
+  it("can close writer", async function () {
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const file = UnixFS.createFileWriter({ writer })
+    const blocks = collect(readable)
+
+    file.write(encodeUTF8("this file does not have much content\n"))
+    const link = await file.close({ closeWriter: true })
+    await blocks
+
+    assert.deepEqual(link, {
+      cid: CID.parse(
+        "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
+      ),
+      contentByteLength: 37,
+      dagByteLength: 45,
     })
-    const fs = UnixFS.createWriter({ writable })
+  })
+
+  it("can release writer lock", async function () {
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const file = UnixFS.createFileWriter({ writer })
+    const blocks = collect(readable)
+
+    file.write(encodeUTF8("this file does not have much content\n"))
+    const link = await file.close({ releaseLock: true })
+    assert.equal(writable.locked, false)
+
+    writable.close()
+    await blocks
+
+    assert.deepEqual(link, {
+      cid: CID.parse(
+        "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
+      ),
+      contentByteLength: 37,
+      dagByteLength: 45,
+    })
+  })
+
+  it("can create writer from writer", async function () {
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const settings = UnixFS.configure({
+      chunker: FixedSize.withMaxChunkSize(18),
+    })
+
+    const file = UnixFS.createFileWriter({
+      writer,
+      settings,
+    })
+
+    const file2 = UnixFS.createFileWriter(file)
+    assert.equal(file2.writer, writer)
+    assert.deepEqual(file2.settings, settings)
   })
 })

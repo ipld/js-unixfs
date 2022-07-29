@@ -3,6 +3,7 @@ import Matrix from "./dataset/convergence_rawdata.js"
 import * as UnixFS from "../src/lib.js"
 import { parseConfig, unpackFile } from "./matrix.js"
 import { CID, collect, iterate, encodeCar, writeFile } from "./util.js"
+import { TransformStream } from "@web-std/stream"
 
 /**
  *
@@ -14,26 +15,23 @@ const createTest = spec =>
    */
   async function test() {
     this.timeout(50000)
-    const { cid, ...config } = await parseConfig(spec)
-    const fs = UnixFS.create(config)
-    const source = await unpackFile(config.url)
+    const { cid, ...settings } = await parseConfig(spec)
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const source = await unpackFile(settings.url)
 
-    // await writeFile("fail.txt", iterate(source.stream()))
-    // return
-
-    const car = encodeCar(fs.readable)
+    const car = encodeCar(readable)
     const ready = writeFile("expect.car", car)
-    // const ready = collect(importer.blocks)
 
     // @ts-expect-error - see https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59057
     const stream = /** @type {ReadableStream<Uint8Array>} */ (source.stream())
-    const file = UnixFS.createFileWriter(fs)
+    const file = UnixFS.createFileWriter({ writer, settings })
     for await (const slice of iterate(stream)) {
       file.write(slice)
     }
 
     const link = await file.close()
-    fs.close()
+    writer.close()
     await ready
     // console.log((await ready).map(block => `${block.cid}`).join("\n"))
 

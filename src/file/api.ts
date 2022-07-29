@@ -1,5 +1,5 @@
 import type { Chunker } from "./chunker/api.js"
-import type { Writer } from "../writer/api.js"
+import type { Writer as StreamWriter } from "../writer/api.js"
 import type { LayoutEngine, NodeID } from "./layout/api.js"
 import * as UnixFS from "../unixfs.js"
 import type {
@@ -23,17 +23,16 @@ export type {
   State,
 }
 
-export interface FileWriterService<Layout> extends EncoderConfig<Layout> {
+export interface FileWriterService<Layout> extends EncoderSettings<Layout> {
   writer: BlockWriter
 }
 
-export interface WriterConfig<Layout extends unknown = unknown> {
-  readonly config?: EncoderConfig<Layout>
+export interface WriterOptions<Layout extends unknown = unknown> {
+  readonly settings?: EncoderSettings<Layout>
   readonly metadata?: UnixFS.Metadata
-  readonly preventClose?: boolean
 }
 
-export interface EncoderConfig<Layout extends unknown = unknown> {
+export interface EncoderSettings<Layout extends unknown = unknown> {
   /**
    * Chunker which will be used to split file content into chunks.
    */
@@ -69,17 +68,21 @@ export interface EncoderConfig<Layout extends unknown = unknown> {
    * This function is used to create CIDs from multihashes. This is similar
    * to `cidVersion` option except you give it CID creator to use.
    */
-  createCID: CreateCID
+  linker: Linker
 }
 
-export interface FileWriterConfig<Layout = unknown> {
-  writable: WritableBlockStream
-
-  preventClose?: boolean
-  config?: EncoderConfig<Layout>
+export interface Options<Layout = unknown> {
+  writer: BlockWriter
+  metadata?: UnixFS.Metadata
+  settings?: EncoderSettings<Layout>
 }
 
-export interface BlockWriter extends Writer<Block> {}
+export interface CloseOptions {
+  releaseLock?: boolean
+  closeWriter?: boolean
+}
+
+export interface BlockWriter extends StreamWriter<Block> {}
 
 export interface WritableBlockStream {
   getWriter(): BlockWriter
@@ -94,8 +97,8 @@ export interface FileEncoder {
   encode(node: UnixFS.File): Uint8Array
 }
 
-export interface CreateCID {
-  <Code extends number>(code: Code, hash: MultihashDigest): CID
+export interface Linker {
+  createLink<Code extends number>(code: Code, hash: MultihashDigest): CID
 }
 
 export interface EncodedFile {
@@ -185,8 +188,13 @@ export interface LinkedFile {
   state: UnixFS.FileLink
 }
 
-export interface FileWriter<T extends unknown = unknown> {
+export interface Writer<T extends unknown = unknown> {
+  write(bytes: Uint8Array): Promise<Writer<T>>
+  close(options?: CloseOptions): Promise<UnixFS.FileLink>
+}
+
+export interface View<T extends unknown = unknown> extends Writer<T> {
+  readonly writer: BlockWriter
+  readonly settings: EncoderSettings<T>
   state: State<T>
-  write(bytes: Uint8Array): Promise<FileWriter<T>>
-  close(): Promise<UnixFS.FileLink>
 }

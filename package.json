@@ -23,7 +23,7 @@
     "gen:types": "tsc --build",
     "prepare": "tsc --build",
     "test:web": "playwright-test test/**/*.spec.js --cov && nyc report",
-    "test:node": "c8 --check-coverage --branches 93 --functions 80 --lines 93 mocha test/**/*.spec.js",
+    "test:node": "c8 --check-coverage --branches 95 --functions 83 --lines 94 mocha test/**/*.spec.js",
     "test": "npm run test:node",
     "coverage": "c8 --reporter=html mocha test/test-*.js && npm_config_yes=true npx st -d coverage -p 8080",
     "typecheck": "tsc --build",
@@ -62,27 +62,27 @@
       "types": "./dist/src/directory.d.ts",
       "import": "./src/directory.js"
     },
-    "./src/file/layout/trickle.js": {
+    "./file/layout/trickle": {
       "types": "./dist/src/file/layout/trickle.d.ts",
       "import": "./src/file/layout/trickle.js"
     },
-    "./src/file/layout/balanced.js": {
+    "./file/layout/balanced": {
       "types": "./dist/src/file/layout/balanced.d.ts",
       "import": "./src/file/layout/balanced.js"
     },
-    "./src/file/layout/queue.js": {
+    "./src/file/layout/queue": {
       "types": "./dist/src/file/layout/queue.d.ts",
       "import": "./src/file/layout/queue.js"
     },
-    "./src/file/chunker/fixed.js": {
+    "./file/chunker/fixed": {
       "types": "./dist/src/file/chunker/fixed.d.ts",
       "import": "./src/file/chunker/fixed.js"
     },
-    "./src/file/chunker/rabin.js": {
+    "./file/chunker/rabin": {
       "types": "./dist/src/file/chunker/rabin.d.ts",
       "import": "./src/file/chunker/rabin.js"
     },
-    "./src/file/chunker/buffer.js": {
+    "./file/chunker/buffer": {
       "types": "./dist/src/file/chunker/buffer.d.ts",
       "import": "./src/file/chunker/buffer.js"
     }

@@ -1,17 +1,31 @@
-import { EncoderConfig } from "../file.js"
 import * as UnixFS from "../unixfs.js"
-import type { BlockWriter, WritableBlockStream } from "../file.js"
-export type { Metadata } from "../unixfs.js"
-
+import type { BlockWriter } from "../file.js"
+import type {
+  Metadata,
+  DirectoryEntryLink,
+  DirectoryLink,
+  FileLink,
+} from "../unixfs.js"
+import type { CloseOptions, Options, EncoderSettings } from "../file.js"
 export type {
   WritableBlockStream,
   BlockWriter,
-  EncoderConfig,
-  WriterConfig,
-  FileWriter,
+  WriterOptions,
+  View as FileWriterView,
 } from "../file/api.js"
 
-export interface DirectoryWriter {
+export type {
+  Options,
+  CloseOptions,
+  EncoderSettings,
+  Metadata,
+  DirectoryEntryLink,
+  DirectoryLink,
+  FileLink,
+  UnixFS,
+}
+
+export interface Writer<Layout extends unknown = unknown> {
   /**
    * Adds new entry (either directory or a file) to this directory. Please note
    * that it is API consumer responsibility to ensure that underlying entry
@@ -39,15 +53,11 @@ export interface DirectoryWriter {
    * demo(writable)
    * ```
    */
-  write(
-    name: string,
-    entry: UnixFS.FileLink | UnixFS.DirectoryLink,
-    options?: WriteOptions
-  ): DirectoryWriter
-  remove(name: string): DirectoryWriter
+  set(name: string, entry: EntryLink, options?: WriteOptions): this
+  remove(name: string): this
 
-  close(): Promise<UnixFS.DirectoryLink>
-  fork(options?: { writable?: WritableBlockStream }): DirectoryWriter
+  close(options?: CloseOptions): Promise<DirectoryLink>
+  fork<L>(options?: Partial<Options<L>>): View<Layout | L>
 }
 
 export interface WriteOptions {
@@ -60,24 +70,25 @@ export interface DirectoryEntry {
 }
 
 export interface State<Layout extends unknown = unknown> {
-  readonly entries: Map<string, UnixFS.DirectoryEntryLink>
-  readonly metadata: UnixFS.Metadata
+  readonly entries: Map<string, EntryLink>
+  readonly metadata: Metadata
   readonly writer: BlockWriter
-  readonly config: EncoderConfig<Layout>
-
-  readonly closeWriter: boolean
+  readonly settings: EncoderSettings<Layout>
 
   closed: boolean
 }
 
-export interface DirectoryWriterView<Layout extends unknown = unknown>
-  extends DirectoryWriter,
-    State<Layout> {}
+export interface View<Layout extends unknown = unknown> extends Writer<Layout> {
+  readonly writer: BlockWriter
+  readonly settings: EncoderSettings<Layout>
 
-export type EntryLink = UnixFS.FileLink | UnixFS.DirectoryLink
+  links(): IterableIterator<DirectoryEntryLink>
+  state: State<Layout>
 
-export interface DirectoryConfig<Layout> {
-  writable: WritableBlockStream
-  preventClose?: boolean
-  config?: EncoderConfig<Layout>
+  entries(): IterableIterator<[string, EntryLink]>
+  has(name: string): boolean
+
+  size: number
 }
+
+export type EntryLink = FileLink | DirectoryLink
