@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0-dev](https://github.com/ipld/js-unixfs/compare/v1.0.3-dev...v1.1.0-dev) (2022-07-29)
+
+
+### Features
+
+* implement flat dir support ([#27](https://github.com/ipld/js-unixfs/issues/27)) ([af49439](https://github.com/ipld/js-unixfs/commit/af494397b5f93782a0e30fd7bccc7117c2e96e07))
+
 ### [1.0.3-dev](https://github.com/ipld/js-unixfs/compare/v1.0.2-dev...v1.0.3-dev) (2022-03-28)
 
 
