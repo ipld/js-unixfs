@@ -1,10 +1,13 @@
 import type {
   WriterOptions,
   EncoderSettings,
-  FileWriter,
   WritableBlockStream,
   BlockWriter,
-  FileWriterOptions,
+  View as FileWriterView,
+  Writer as FileWriter,
+  Options as FileWriterOptions,
+  State as FileWriterSate,
+  CloseOptions,
   Chunker,
   LayoutEngine,
   Block,
@@ -14,27 +17,46 @@ import type {
 } from "./file.js"
 
 import type {
-  DirectoryWriter,
   DirectoryEntry,
-  DirectoryWriterOptions,
+  Writer as DirectoryWriter,
+  View as DirectoryWriterView,
+  Options as DirectoryWriterOptions,
+  State as DirectoryWriterState,
 } from "./directory.js"
+import { Metadata } from "./unixfs.js"
 
 export type {
   WriterOptions,
+  CloseOptions,
   EncoderSettings,
+  FileWriterOptions,
+  FileWriterView,
   FileWriter,
+  FileWriterSate,
   EncodedFile,
   BlockWriter,
-  FileWriterOptions,
   WritableBlockStream,
+  DirectoryWriterView,
   DirectoryWriter,
-  DirectoryEntry,
   DirectoryWriterOptions,
+  DirectoryWriterState,
+  DirectoryEntry,
   Chunker,
   LayoutEngine,
   Block,
   MultihashHasher,
   MultihashDigest,
+  Metadata,
+}
+
+/**
+ *
+ */
+export interface Writer {
+  /**
+   * Closes this writer and corresponding
+   */
+  close(options?: CloseOptions): Promise<this>
 }
 
 /**
@@ -44,11 +66,11 @@ export type {
  * [block]:https://ipld.io/docs/intro/primer/#blocks-vs-nodes
  * [UnixFS]:https://github.com/ipfs/specs/blob/main/UNIXFS.md
  */
-export interface FileSystemWriter<L extends unknown = unknown> {
+export interface View<L extends unknown = unknown> extends Writer {
   /**
    * Underlaying stream where [UnixFS][] blocks will be written into.
    */
-  readonly writable: WritableBlockStream
+  readonly writer: BlockWriter
   /**
    * Encoder configuration of this writer.
    */
@@ -62,7 +84,7 @@ export interface FileSystemWriter<L extends unknown = unknown> {
    */
   createFileWriter<Layout>(
     settings?: WriterOptions<Layout>
-  ): FileWriter<L | Layout>
+  ): FileWriterView<L | Layout>
 
   /**
    * Creates new directory writer that will write blocks into the same
@@ -70,15 +92,12 @@ export interface FileSystemWriter<L extends unknown = unknown> {
    * passing same stream and encoder configuration.
    *
    */
-  createDirectoryWriter(settings?: WriterOptions): DirectoryWriter
-
-  /**
-   * Closes this writer and corresponding
-   */
-  close(): Promise<void>
+  createDirectoryWriter<Layout>(
+    settings?: WriterOptions<Layout>
+  ): DirectoryWriterView<L | Layout>
 }
 
-export interface FileSystemWriterOptions<Layout extends unknown = unknown> {
+export interface Options<Layout extends unknown = unknown> {
   writable: WritableBlockStream
   settings?: EncoderSettings<Layout>
 }

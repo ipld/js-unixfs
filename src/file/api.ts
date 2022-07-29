@@ -1,5 +1,5 @@
 import type { Chunker } from "./chunker/api.js"
-import type { Writer } from "../writer/api.js"
+import type { Writer as StreamWriter } from "../writer/api.js"
 import type { LayoutEngine, NodeID } from "./layout/api.js"
 import * as UnixFS from "../unixfs.js"
 import type {
@@ -30,7 +30,6 @@ export interface FileWriterService<Layout> extends EncoderSettings<Layout> {
 export interface WriterOptions<Layout extends unknown = unknown> {
   readonly settings?: EncoderSettings<Layout>
   readonly metadata?: UnixFS.Metadata
-  readonly preventClose?: boolean
 }
 
 export interface EncoderSettings<Layout extends unknown = unknown> {
@@ -72,15 +71,18 @@ export interface EncoderSettings<Layout extends unknown = unknown> {
   linker: Linker
 }
 
-export interface FileWriterOptions<Layout = unknown> {
-  writable: WritableBlockStream
-
-  preventClose?: boolean
-  releaseLock?: boolean
+export interface Options<Layout = unknown> {
+  writer: BlockWriter
+  metadata?: UnixFS.Metadata
   settings?: EncoderSettings<Layout>
 }
 
-export interface BlockWriter extends Writer<Block> {}
+export interface CloseOptions {
+  releaseLock?: boolean
+  closeWriter?: boolean
+}
+
+export interface BlockWriter extends StreamWriter<Block> {}
 
 export interface WritableBlockStream {
   getWriter(): BlockWriter
@@ -186,9 +188,13 @@ export interface LinkedFile {
   state: UnixFS.FileLink
 }
 
-export interface FileWriter<T extends unknown = unknown> {
-  readonly writable: WritableBlockStream
+export interface Writer<T extends unknown = unknown> {
+  write(bytes: Uint8Array): Promise<Writer<T>>
+  close(options?: CloseOptions): Promise<UnixFS.FileLink>
+}
+
+export interface View<T extends unknown = unknown> extends Writer<T> {
+  readonly writer: BlockWriter
+  readonly settings: EncoderSettings<T>
   state: State<T>
-  write(bytes: Uint8Array): Promise<FileWriter<T>>
-  close(): Promise<UnixFS.FileLink>
 }

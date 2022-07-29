@@ -1,7 +1,7 @@
-import * as UnixFS from "../../unixfs.js"
 import * as Layout from "./api.js"
 import * as Queue from "./queue/api.js"
 export * from "./queue/api.js"
+
 /**
  * @returns {Queue.Result}
  */

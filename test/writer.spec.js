@@ -1,11 +1,11 @@
 import * as Writer from "../src/file/writer.js"
-import * as Channel from "../src/writer/channel.js"
 import * as UnixFS from "../src/lib.js"
+import { TransformStream } from "@web-std/stream"
 import { assert } from "chai"
 
 describe("Writer", () => {
   it("invalid state", () => {
-    const channel = Channel.createBlockChannel()
+    const channel = new TransformStream()
     const state = Writer.init(
       channel.writable.getWriter(),
       {},
@@ -24,7 +24,7 @@ describe("Writer", () => {
   })
 
   it("can only write if open", () => {
-    const channel = Channel.createBlockChannel()
+    const channel = new TransformStream()
     const open = Writer.init(
       channel.writable.getWriter(),
       {},
@@ -38,7 +38,7 @@ describe("Writer", () => {
   })
 
   it("close closed is noop", () => {
-    const channel = Channel.createBlockChannel()
+    const channel = new TransformStream()
     const open = Writer.init(
       channel.writable.getWriter(),
       {},

@@ -77,6 +77,8 @@ describe("layout queue", () => {
   it("needs first child", () => {
     const v0 = Queue.empty()
 
+    assert.equal(Queue.isEmpty(v0), true)
+
     const v1 = Queue.addNode(
       {
         id: 0,
@@ -84,6 +86,9 @@ describe("layout queue", () => {
       },
       v0
     )
+
+    assert.equal(Queue.isEmpty(v1), false)
+    assert.equal(Queue.isEmpty(v0), true)
 
     assert.deepEqual(
       v1,
