@@ -26,7 +26,7 @@ export const create = ({ writer, settings = defaults(), metadata = {} }) =>
  * @param {View} view
  * @param {string} name
  * @param {API.EntryLink} link
- * @param {API.WriteOptions} [options]
+ * @param {API.WriteOptions} options
  */
 export const set = (view, name, link, { overwrite = false } = {}) => {
   const writable = asWritable(view.state)
@@ -73,7 +73,7 @@ const asWritable = writer => {
 /**
  * @template {unknown} Layout
  * @param {{ state: API.State<Layout> }} view
- * @param {API.CloseOptions} [options]
+ * @param {API.CloseOptions} options
  * @returns {Promise<UnixFS.DirectoryLink>}
  */
 export const close = async (
@@ -86,6 +86,7 @@ export const close = async (
   const node = UnixFS.createFlatDirectory(entries, metadata)
   const bytes = UnixFS.encodeDirectory(node)
   const digest = await settings.hasher.digest(bytes)
+  /** @type {UnixFS.Link<UnixFS.Directory>} */
   const cid = settings.linker.createLink(UnixFS.code, digest)
 
   // we make sure that writer has some capacity for this write. If it
@@ -112,17 +113,22 @@ export const close = async (
 /**
  * @template {unknown} Layout
  * @param {{ state: API.State<Layout> }} view
+ * @returns {IterableIterator<UnixFS.DirectoryEntryLink>}
  */
 export const links = function* ({ state }) {
   for (const [name, { dagByteLength, cid }] of state.entries) {
-    yield { name, dagByteLength, cid }
+    yield /** @type {UnixFS.DirectoryEntryLink} */ ({
+      name,
+      dagByteLength,
+      cid,
+    })
   }
 }
 
 /**
  * @template L1, L2
  * @param {API.View<L1>} state
- * @param {Partial<API.Options<L1|L2>>} [options]
+ * @param {Partial<API.Options<L1|L2>>} options
  * @returns {API.View<L1|L2>}
  */
 export const fork = (

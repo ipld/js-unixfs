@@ -36,7 +36,7 @@ export const createWriter = ({ writable, settings = File.defaults() }) =>
 /**
  * @template {{writer:API.BlockWriter}} View
  * @param {View} view
- * @param {API.CloseOptions} [options]
+ * @param {API.CloseOptions} options
  */
 export const close = async (
   view,
@@ -68,7 +68,7 @@ class FileSystemWriter {
 
   /**
    * @template [L=unknown]
-   * @param {API.WriterOptions<L|Layout>} [config]
+   * @param {API.WriterOptions<L|Layout>} config
    */
   createFileWriter({ settings = this.settings, metadata } = {}) {
     return File.create({
@@ -80,7 +80,7 @@ class FileSystemWriter {
 
   /**
    * @template [L=unknown]
-   * @param {API.WriterOptions<L|Layout>} [config]
+   * @param {API.WriterOptions<L|Layout>} config
    */
   createDirectoryWriter({ settings = this.settings, metadata } = {}) {
     return Directory.create({

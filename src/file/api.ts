@@ -3,11 +3,12 @@ import type { Writer as StreamWriter } from "../writer/api.js"
 import type { LayoutEngine, NodeID } from "./layout/api.js"
 import * as UnixFS from "../unixfs.js"
 import type {
-  CID,
   Block,
   BlockEncoder,
   MultihashHasher,
   MultihashDigest,
+  Link,
+  LinkVersion,
 } from "../unixfs.js"
 import type { State } from "./writer.js"
 
@@ -97,8 +98,11 @@ export interface FileEncoder {
   encode(node: UnixFS.File): Uint8Array
 }
 
-export interface Linker {
-  createLink<Code extends number>(code: Code, hash: MultihashDigest): CID
+export interface Linker<V extends LinkVersion = LinkVersion> {
+  createLink<T extends unknown, Code extends number, Alg extends number>(
+    code: Code,
+    hash: MultihashDigest<Alg>
+  ): Link<T, Code, Alg, V>
 }
 
 export interface EncodedFile {

@@ -1,6 +1,6 @@
 import * as UnixFS from "../src/lib.js"
 import { assert } from "chai"
-import { encodeUTF8, CID, collect, importFile } from "./util.js"
+import { encodeUTF8, Link, collect, importFile } from "./util.js"
 import { TransformStream } from "@web-std/stream"
 
 describe("UnixFS.createWriter", () => {
@@ -11,7 +11,8 @@ describe("UnixFS.createWriter", () => {
     const file = UnixFS.createFileWriter(writer)
     file.write(new TextEncoder().encode("hello world"))
     assert.deepEqual(await file.close(), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeihykld7uyxzogax6vgyvag42y7464eywpf55gxi5qpoisibh3c5wa"
       ),
       dagByteLength: 19,
@@ -33,7 +34,8 @@ describe("UnixFS.createWriter", () => {
     const file = writer.createFileWriter()
     file.write(encodeUTF8("hello world"))
     assert.deepEqual(await file.close(), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeihykld7uyxzogax6vgyvag42y7464eywpf55gxi5qpoisibh3c5wa"
       ),
       dagByteLength: 19,
@@ -57,7 +59,8 @@ describe("UnixFS.createWriter", () => {
 
     root.set("hello", await importFile(root, ["hello"]))
     assert.deepEqual(await root.close(), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
       ),
       dagByteLength: 66,
@@ -83,7 +86,8 @@ describe("UnixFS.createWriter", () => {
 
     root.set("hello", await importFile(root, ["hello"]))
     assert.deepEqual(await root.close(), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
       ),
       dagByteLength: 66,
@@ -109,7 +113,8 @@ describe("UnixFS.createWriter", () => {
 
     root.set("hello", await importFile(root, ["hello"]))
     assert.deepEqual(await root.close(), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
       ),
       dagByteLength: 66,
@@ -144,7 +149,8 @@ describe("UnixFS.withCapacity", async () => {
   const file = UnixFS.createFileWriter(fs)
   file.write(new TextEncoder().encode("hello world"))
   assert.deepEqual(await file.close(), {
-    cid: CID.parse(
+    /** @type {Link.Link} */
+    cid: Link.parse(
       "bafybeihykld7uyxzogax6vgyvag42y7464eywpf55gxi5qpoisibh3c5wa"
     ),
     dagByteLength: 19,
@@ -157,7 +163,8 @@ describe("UnixFS.withCapacity", async () => {
   bye.write(new TextEncoder().encode("bye"))
 
   assert.deepEqual(await bye.close(), {
-    cid: CID.parse(
+    /** @type {Link.Link} */
+    cid: Link.parse(
       "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
     ),
     dagByteLength: 11,
