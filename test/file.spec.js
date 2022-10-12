@@ -1,7 +1,7 @@
 /* eslint-env mocha */
 
 import { assert } from "chai"
-import { encodeUTF8, CID, hashrecur, collect } from "./util.js"
+import { encodeUTF8, Link, hashrecur, collect } from "./util.js"
 import * as UnixFS from "../src/lib.js"
 import * as Trickle from "../src/file/layout/trickle.js"
 import * as Balanced from "../src/file/layout/balanced.js"
@@ -65,7 +65,8 @@ describe("test file", () => {
     assert.deepEqual(link, {
       contentByteLength: 786432,
       dagByteLength: 786632,
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeiegda62p2cdi5sono3h3hqjnxwc56z4nocynrj44rz7rtc2p246cy"
       ),
     })
@@ -78,7 +79,7 @@ describe("test file", () => {
 
     assert.deepEqual(
       r1.value.cid,
-      CID.parse("bafybeihhsdoupgd3fnl3e3367ymsanmikafpllldsdt37jzyoh6nuatowe")
+      Link.parse("bafybeihhsdoupgd3fnl3e3367ymsanmikafpllldsdt37jzyoh6nuatowe")
     )
 
     const r2 = await blocks.read()
@@ -87,7 +88,7 @@ describe("test file", () => {
     }
     assert.deepEqual(
       r2.value.cid,
-      CID.parse("bafybeief3dmadxfymhhhrflqytqmlhlz47w6glaxvyzmm6s6tpfb6izzee")
+      Link.parse("bafybeief3dmadxfymhhhrflqytqmlhlz47w6glaxvyzmm6s6tpfb6izzee")
     )
 
     const r3 = await blocks.read()
@@ -96,7 +97,7 @@ describe("test file", () => {
     }
     assert.deepEqual(
       r3.value.cid,
-      CID.parse("bafybeihznihf5g5ibdyoawn7uu3inlyqrxjv63lt6lop6h3w6rzwrp67a4")
+      Link.parse("bafybeihznihf5g5ibdyoawn7uu3inlyqrxjv63lt6lop6h3w6rzwrp67a4")
     )
 
     await writer.close()
@@ -110,7 +111,7 @@ describe("test file", () => {
       fileChunkEncoder: UnixFS.UnixFSLeaf,
       smallFileEncoder: UnixFS.UnixFSLeaf,
       fileLayout: Balanced,
-      linker: { createLink: CID.createV1 },
+      linker: { createLink: Link.create },
       hasher: sha256,
       fileEncoder: UnixFS,
     }
@@ -131,7 +132,8 @@ describe("test file", () => {
 
     const link = await file.close()
     assert.deepEqual(link, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeiduffmtppi4cwa6olo3ggmoehvtdtcd47y6ddoodhyvcv7y3zvgnq"
       ),
       contentByteLength: 144177,
@@ -165,7 +167,7 @@ describe("test file", () => {
 
     assert.deepEqual(
       link.cid,
-      CID.parse("bafybeicj5kf4mohavbbh4j5izwy3k23cysewxfhgtmlaoxq6sewx2tsr7u")
+      Link.parse("bafybeicj5kf4mohavbbh4j5izwy3k23cysewxfhgtmlaoxq6sewx2tsr7u")
     )
 
     assert.deepEqual((await blocks).length, 4)
@@ -195,7 +197,8 @@ describe("test file", () => {
     const blocks = await collector
 
     assert.deepEqual(link, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeidia54tfr7ycw2ls2mxyjpcto42mriytx2ymlwgwsjqzner5wqc5u"
       ),
       contentByteLength: 524288,
@@ -228,7 +231,8 @@ describe("test file", () => {
     await blocks
 
     assert.deepEqual(link, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeigu6bkvpxtamauopeu2ejzkxy4wgqa576wmfc6ubusjwhgold4aum"
       ),
       contentByteLength: 524288,
@@ -263,7 +267,8 @@ describe("test file", () => {
     await blocks
 
     assert.deepEqual(link, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeieyaff3xepdv5r56bnhgxbxpjy6pzvxqpc6abjtkk4f46ylwop5ga"
       ),
       contentByteLength: chunkSize * leafCount,
@@ -283,7 +288,8 @@ describe("test file", () => {
     await blocks
 
     assert.deepEqual(link, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeif7ztnhq65lumvvtr4ekcwd2ifwgm3awq4zfr3srh462rwyinlb4y"
       ),
       contentByteLength: 0,
@@ -302,7 +308,8 @@ describe("test file", () => {
     await blocks
 
     assert.deepEqual(link, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
       ),
       contentByteLength: 37,
@@ -324,7 +331,8 @@ describe("test file", () => {
     await blocks
 
     assert.deepEqual(link, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
       ),
       contentByteLength: 37,

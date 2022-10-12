@@ -1,4 +1,4 @@
-import { CID, File, fetch } from "./util.js"
+import { Link, File, fetch } from "./util.js"
 import * as Trickle from "../src/file/layout/trickle.js"
 import * as Balanced from "../src/file/layout/balanced.js"
 import * as FixedSize from "../src/file/chunker/fixed.js"
@@ -38,7 +38,7 @@ const base = new URL("./dataset/testdata/", import.meta.url)
  * fileLayout: API.LayoutEngine<unknown>
  * hasher: API.MultihashHasher
  * inlining: number
- * cid: CID
+ * cid: UnixFS.Link
  * impl: string
  * cmd: string
  * }} Config
@@ -64,23 +64,24 @@ export const parseConfig = async input => {
     fileEncoder: UnixFS,
     hasher: sha256,
     fileLayout: input.trickle ? Trickle : Balanced,
-    linker: {
-      createLink: input.cidVersion === 0 ? createCIDv0 : CID.createV1,
-    },
+    linker:
+      input.cidVersion === 0
+        ? /** @type {API.Linker} */
+          ({ createLink: createCIDv0 })
+        : { createLink: Link.create },
     chunkerConfig: input.chunker,
     chunker: await parseChunker(input.chunker),
-    cid: CID.parse(input.cid),
+    cid: Link.parse(input.cid),
     cmd: input.cmd,
   }
 }
 
 /**
  * @param {number} code
- * @param {API.MultihashDigest} hash
- * @returns
+ * @param {API.MultihashDigest<any>} hash
  */
 const createCIDv0 = (code, hash) =>
-  code === UnixFS.code ? CID.createV0(hash) : CID.createV1(code, hash)
+  code === UnixFS.code ? Link.createLegacy(hash) : Link.create(code, hash)
 /**
  * @param {string} input
  */

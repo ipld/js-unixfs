@@ -126,7 +126,7 @@ export const withWidth = width => ({
 export const defaults = { width: 174 }
 
 /**
- * @param {Options} [options]
+ * @param {Options} options
  * @returns {Balanced}
  */
 export const open = ({ width } = defaults) => ({

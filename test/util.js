@@ -1,5 +1,5 @@
 import { File, Blob } from "@web-std/file"
-import { CID } from "multiformats"
+import * as Link from "multiformats/link"
 import fetch from "@web-std/fetch"
 import { sha256 } from "multiformats/hashes/sha2"
 import { CarWriter } from "@ipld/car"
@@ -17,7 +17,7 @@ export const encodeUTF8 = input => utf8Encoder.encode(input)
  * then recursively hashing the product until total number of bytes yield
  * reaches `byteLength` (by default it is inifinity).
  *
- * @param {object} [options]
+ * @param {object} options
  * @param {Uint8Array} [options.seed]
  * @param {number} [options.byteLength]
  */
@@ -86,11 +86,15 @@ const pipe = async (source, writer) => {
  * @param {ReadableStream<Block>} blocks
  */
 export const encodeCar = blocks => {
-  const { writer, out } = CarWriter.create([CID.parse("bafkqaaa")])
+  const { writer, out } = CarWriter.create([
+    // @ts-expect-error - https://github.com/ipld/js-car/pull/97
+    Link.parse("bafkqaaa"),
+  ])
   pipe(iterate(blocks), {
     write: block =>
       writer.put({
-        cid: /** @type {CID} */ (block.cid),
+        // @ts-expect-error - https://github.com/ipld/js-car/pull/97
+        cid: block.cid,
         bytes: block.bytes,
       }),
     close: () => writer.close(),
@@ -139,4 +143,4 @@ export const importFile = async (fs, content) => {
   return await file.close()
 }
 
-export { File, CID, fetch }
+export { File, Link, fetch }

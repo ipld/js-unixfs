@@ -18,17 +18,20 @@ export const name = "UnixFS"
 
 /**
  * @param {UnixFS.IData} data
- * @param {ReadonlyArray<PB.PBLink>} links
+ * @param {ReadonlyArray<UnixFS.PBLink>} links
  */
 const encodePB = (data, links) => {
   Object(globalThis).debug && console.log({ data, links })
+
   return PB.encode(
     // We run through prepare as links need to be sorted by name which it will
     // do.
     PB.prepare({
       Data: Data.encode(data).finish(),
       // We can cast to mutable array as we know no mutation occurs there
-      Links: /** @type {PB.PBLink[]} */ (links),
+      Links:
+        // @ts-expect-error https://github.com/ipld/js-dag-pb/pull/59
+        /** @type {PB.PBLink[]} */ (links),
     })
   )
 }
@@ -99,7 +102,8 @@ export const createFileShard = parts => ({
  * @param {UnixFS.FileLink[]} parts
  * @param {UnixFS.Metadata} [metadata]
  * @returns {UnixFS.ComplexFile}
- */ export const createComplexFile = (content, parts, metadata) => ({
+ */
+export const createComplexFile = (content, parts, metadata) => ({
   type: NodeType.File,
   layout: "complex",
   content,
@@ -234,7 +238,7 @@ export const encodeAdvancedFile = (parts, metadata = BLANK) =>
 
 /**
  * @param {UnixFS.DAGLink} dag
- * @returns {PB.PBLink}
+ * @returns {UnixFS.PBLink}
  */
 export const encodeLink = dag => ({
   Name: "",
@@ -430,16 +434,9 @@ export const decode = bytes => {
     ...(mode && { mode }),
     ...decodeMtime(mtime),
   }
+  /** @type {UnixFS.PBLink[]} */
+  // @ts-expect-error - https://github.com/ipld/js-dag-pb/pull/59
   const links = pb.Links
-
-  // const node = {
-  //   type,
-  //   ...rest,
-
-  //   // ...decodeBlocksizes(type, blocksizes),
-  //   ...decodeMtime(mtime),
-  //   // ...decodeLinks(type, pb.Links),
-  // }
 
   switch (message.Type) {
     case NodeType.Raw:
@@ -463,7 +460,7 @@ export const decode = bytes => {
       return createFlatDirectory(decodeDirectoryLinks(links), metadata)
     case NodeType.HAMTShard:
       return createShardedDirectory(
-        decodeDirectoryLinks(pb.Links),
+        decodeDirectoryLinks(links),
         data || EMPTY_BUFFER,
         rest.fanout,
         rest.hashType,
@@ -502,7 +499,7 @@ const decodeBlocksizes = (type, blocksizes) => {
 /**
  *
  * @param {number[]} blocksizes
- * @param {PB.PBLink[]} links
+ * @param {UnixFS.PBLink[]} links
  * @returns {UnixFS.FileLink[]}
  */
 
@@ -511,25 +508,30 @@ const decodeFileLinks = (blocksizes, links) => {
   const length = blocksizes.length
   let n = 0
   while (n < length) {
-    parts.push({
-      cid: links[n].Hash,
-      dagByteLength: links[n].Tsize || 0,
-      contentByteLength: blocksizes[n],
-    })
+    parts.push(
+      /** @type {UnixFS.FileLink} */ ({
+        cid: links[n].Hash,
+        dagByteLength: links[n].Tsize || 0,
+        contentByteLength: blocksizes[n],
+      })
+    )
   }
   return parts
 }
 
 /**
- * @param {PB.PBLink[]} links
+ * @param {UnixFS.PBLink[]} links
  * @returns {UnixFS.DirectoryEntryLink[]}
  */
 const decodeDirectoryLinks = links =>
-  links.map(link => ({
-    cid: link.Hash,
-    name: link.Name || "",
-    dagByteLength: link.Tsize || 0,
-  }))
+  links.map(
+    link =>
+      /** @type {UnixFS.DirectoryEntryLink} */ ({
+        cid: link.Hash,
+        name: link.Name || "",
+        dagByteLength: link.Tsize || 0,
+      })
+  )
 
 /**
  * @param {ReadonlyArray<UnixFS.FileLink>} links
@@ -554,12 +556,11 @@ const contentByteLength = link => link.contentByteLength
 
 /**
  * @param {UnixFS.NamedDAGLink<unknown>} link
- * @returns {import('@ipld/dag-pb').PBLink}
+ * @returns {UnixFS.PBLink}
  */
 const encodeNamedLink = ({ name, dagByteLength, cid }) => ({
   Name: name,
   Tsize: dagByteLength,
-  // @ts-ignore - @see https://github.com/multiformats/js-multiformats/pull/161
   Hash: cid,
 })
 

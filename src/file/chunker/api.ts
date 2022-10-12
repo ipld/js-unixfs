@@ -55,9 +55,8 @@ export interface StatefulChunker<T> extends ChunkerAPI<T> {
   type: "Stateful"
 }
 
-export interface StatelessChunker<T extends Readonly<unknown>>
-  extends ChunkerAPI<T> {
+export interface StatelessChunker<T> extends ChunkerAPI<T> {
   type: "Stateless"
 }
 
-export type Chunker<T = any> = StatefulChunker<T> | StatelessChunker<T>
+export type Chunker<T = unknown> = StatefulChunker<T> | StatelessChunker<T>

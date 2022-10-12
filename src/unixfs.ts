@@ -1,17 +1,20 @@
-import type { MultihashDigest } from "multiformats/hashes/interface"
-import { Data, type IData } from "../gen/unixfs.js"
-export type { BlockEncoder } from "multiformats/codecs/interface"
-import type { MultibaseEncoder } from "multiformats/bases/interface"
-export type {
-  MultihashHasher,
+import type {
   MultihashDigest,
-} from "multiformats/hashes/interface"
+  MultibaseEncoder,
+  BlockEncoder,
+  MultihashHasher,
+  Link as IPLDLink,
+  Version as LinkVersion,
+  Block as IPLDBlock,
+} from "multiformats"
+import { Data, type IData } from "../gen/unixfs.js"
+export type { MultihashHasher, MultibaseEncoder, MultihashDigest, BlockEncoder }
 export * as Layout from "./file/layout/api"
 
 import NodeType = Data.DataType
 
 export { NodeType }
-export type { IData }
+export type { IData, LinkVersion }
 
 /**
  * Type representing any UnixFS node.
@@ -166,7 +169,7 @@ export interface DAGLink<T = unknown> extends Phantom<T> {
   /**
    * *C*ontent *Id*entifier of the target DAG.
    */
-  readonly cid: CID
+  readonly cid: Link<T>
 
   /**
    * Cumulative number of bytes in the target DAG, that is number of bytes in
@@ -226,7 +229,10 @@ export interface FlatDirectory {
   readonly metadata?: Metadata
 }
 
-export type DirectoryEntryLink = NamedDAGLink<File> | NamedDAGLink<Directory>
+export type DirectoryEntryLink =
+  | NamedDAGLink<File>
+  | NamedDAGLink<Directory>
+  | NamedDAGLink<Uint8Array>
 
 export type DirectoryLink = DAGLink<Directory>
 
@@ -273,6 +279,7 @@ export interface DirectoryShard {
 
 export type ShardedDirectoryLink =
   | NamedDAGLink<File>
+  | NamedDAGLink<Uint8Array>
   | NamedDAGLink<Directory>
   | NamedDAGLink<DirectoryShard>
 /**
@@ -344,34 +351,6 @@ export interface MTime {
 }
 
 /**
- * Logical representation of *C*ontent *Id*entifier, where `C` is a logical
- * representation of the content it identifies.
- *
- * Note: This is not an actual definition from multiformats because that one
- * refers to a specific class and there for is problematic.
- *
- * @see https://github.com/multiformats/js-multiformats/pull/161
- */
-export interface CID<
-  V extends 0 | 1 = 0 | 1,
-  C extends number = number,
-  A extends number = number
-> {
-  readonly version: V
-  readonly code: C
-  readonly multihash: MultihashDigest<A>
-  readonly bytes: Uint8Array
-
-  toString<Prefix extends string>(encoder?: MultibaseEncoder<Prefix>): string
-}
-
-// @see https://github.com/ipld/js-car/blob/a53d5c77d30f998b45a534e20d0f174574c58cd5/api.ts#L5
-export interface Block {
-  cid: CID
-  bytes: Uint8Array
-}
-
-/**
  * Represents byte encoded representation of the `Data`. It uses type parameter
  * to capture the structure of the data it encodes.
  */
@@ -402,3 +381,23 @@ export interface Phantom<T> {
 }
 
 declare const PhantomKey: unique symbol
+
+export interface Link<
+  Data extends unknown = unknown,
+  Format extends number = number,
+  Alg extends number = number,
+  V extends LinkVersion = LinkVersion
+> extends IPLDLink<Data, Format, Alg, V> {}
+
+export interface PBLink {
+  Name?: string
+  Tsize?: number
+  Hash: Link
+}
+
+export interface Block<
+  T = unknown,
+  C extends number = number,
+  A extends number = number,
+  V extends LinkVersion = LinkVersion
+> extends IPLDBlock<T, C, A, V> {}

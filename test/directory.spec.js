@@ -1,7 +1,7 @@
 import * as UnixFS from "../src/lib.js"
 import { TransformStream } from "@web-std/stream"
 import { assert } from "chai"
-import { encodeUTF8, CID, collect, importFile } from "./util.js"
+import { encodeUTF8, Link, collect, importFile } from "./util.js"
 
 const createChannel = () => new TransformStream()
 describe("test directory", () => {
@@ -13,7 +13,8 @@ describe("test directory", () => {
     writer.close()
 
     assert.deepEqual(link, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354"
       ),
       dagByteLength: 4,
@@ -22,7 +23,11 @@ describe("test directory", () => {
 
     assert.deepEqual(
       output.map($ => $.cid),
-      [CID.parse("bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354")]
+      [
+        Link.parse(
+          "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354"
+        ),
+      ]
     )
   })
 
@@ -37,7 +42,8 @@ describe("test directory", () => {
     const fileLink = await file.close()
 
     assert.deepEqual(fileLink, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
       ),
       dagByteLength: 45,
@@ -49,7 +55,8 @@ describe("test directory", () => {
 
     assert.deepEqual(rootLink, {
       dagByteLength: 101,
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeic7trkgurgp22uhxq5rnii5e75v4m4hf2ovohyxwntm4ymp7myh5i"
       ),
     })
@@ -61,10 +68,10 @@ describe("test directory", () => {
     assert.deepEqual(
       output.map($ => $.cid),
       [
-        CID.parse(
+        Link.parse(
           "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
         ),
-        CID.parse(
+        Link.parse(
           "bafybeic7trkgurgp22uhxq5rnii5e75v4m4hf2ovohyxwntm4ymp7myh5i"
         ),
       ]
@@ -80,7 +87,8 @@ describe("test directory", () => {
 
     root.set("nested", await nested.close())
     assert.deepEqual(await root.close(), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeibjme43s5mbvupa25dl3xpbkmuqeje7hefvavy6k7cuhm3nxz2m3q"
       ),
       dagByteLength: 58,
@@ -130,7 +138,8 @@ describe("test directory", () => {
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
@@ -139,7 +148,8 @@ describe("test directory", () => {
 
     const bye = await importFile(root, ["bye"])
     assert.deepEqual(bye, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
       ),
       dagByteLength: 11,
@@ -155,7 +165,8 @@ describe("test directory", () => {
     const link = await root.close()
 
     assert.deepEqual(link, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44"
       ),
       dagByteLength: 124,
@@ -181,7 +192,8 @@ describe("test directory", () => {
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
@@ -190,7 +202,8 @@ describe("test directory", () => {
 
     const bye = await importFile(root, ["bye"])
     assert.deepEqual(bye, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
       ),
       dagByteLength: 11,
@@ -202,7 +215,8 @@ describe("test directory", () => {
     const link = await root.close()
 
     assert.deepEqual(link, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeid6gy6b24lpyqtdmch7chsef4wykmxsh3ysuj2ou3wlz3cevdcc4a"
       ),
       dagByteLength: 64,
@@ -228,7 +242,8 @@ describe("test directory", () => {
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
@@ -240,7 +255,8 @@ describe("test directory", () => {
     const link = await root.close()
 
     assert.deepEqual(link, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354"
       ),
       dagByteLength: 4,
@@ -280,7 +296,8 @@ describe("test directory", () => {
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
@@ -289,7 +306,8 @@ describe("test directory", () => {
 
     const bye = await importFile(root, ["bye"])
     assert.deepEqual(bye, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
       ),
       dagByteLength: 11,
@@ -298,7 +316,8 @@ describe("test directory", () => {
 
     root.set("hello", hello)
     assert.deepEqual(await root.close(), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
       ),
       dagByteLength: 66,
@@ -330,7 +349,8 @@ describe("test directory", () => {
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
@@ -339,7 +359,8 @@ describe("test directory", () => {
 
     const bye = await importFile(root, ["bye"])
     assert.deepEqual(bye, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
       ),
       dagByteLength: 11,
@@ -348,7 +369,8 @@ describe("test directory", () => {
 
     root.set("hello", hello)
     assert.deepEqual(await root.close(), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
       ),
       dagByteLength: 66,
@@ -357,7 +379,8 @@ describe("test directory", () => {
     const fork = root.fork()
     fork.set("bye", bye)
     assert.deepEqual(await fork.close(), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44"
       ),
       dagByteLength: 124,
@@ -386,7 +409,8 @@ describe("test directory", () => {
     file.write(new TextEncoder().encode("hello"))
     root.set("hello", await file.close())
     assert.deepEqual(await root.close({ closeWriter: true }), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
       ),
       dagByteLength: 66,
@@ -411,7 +435,8 @@ describe("test directory", () => {
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
@@ -420,7 +445,8 @@ describe("test directory", () => {
 
     const bye = await importFile(root, ["bye"])
     assert.deepEqual(bye, {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
       ),
       dagByteLength: 11,
@@ -429,7 +455,8 @@ describe("test directory", () => {
 
     root.set("hello", hello)
     assert.deepEqual(await root.close(), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
       ),
       dagByteLength: 66,
@@ -442,7 +469,8 @@ describe("test directory", () => {
     const fork = root.fork({ writer: patchWriter })
     fork.set("bye", bye)
     assert.deepEqual(await fork.close(), {
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44"
       ),
       dagByteLength: 124,
@@ -483,7 +511,8 @@ describe("test directory", () => {
 
     assert.deepEqual(link, {
       dagByteLength: 101,
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeic7trkgurgp22uhxq5rnii5e75v4m4hf2ovohyxwntm4ymp7myh5i"
       ),
     })
@@ -507,7 +536,8 @@ describe("test directory", () => {
 
     assert.deepEqual(link, {
       dagByteLength: 101,
-      cid: CID.parse(
+      /** @type {Link.Link} */
+      cid: Link.parse(
         "bafybeic7trkgurgp22uhxq5rnii5e75v4m4hf2ovohyxwntm4ymp7myh5i"
       ),
     })
@@ -519,7 +549,8 @@ describe("test directory", () => {
     const root = UnixFS.createDirectoryWriter({ writer })
 
     assert.deepEqual([...root.entries()], [])
-    const cid = CID.parse(
+    /** @type {Link.Link} */
+    const cid = Link.parse(
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
     )
     const fileLink = {
@@ -538,7 +569,8 @@ describe("test directory", () => {
     const root = UnixFS.createDirectoryWriter({ writer })
 
     assert.deepEqual([...root.links()], [])
-    const cid = CID.parse(
+    /** @type {Link.Link} */
+    const cid = Link.parse(
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
     )
     const fileLink = {
@@ -565,7 +597,8 @@ describe("test directory", () => {
     const writer = writable.getWriter()
     const root = UnixFS.createDirectoryWriter({ writer })
     assert.equal(root.has("file.txt"), false)
-    const cid = CID.parse(
+    /** @type {Link.Link} */
+    const cid = Link.parse(
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
     )
 
@@ -585,7 +618,8 @@ describe("test directory", () => {
     const writer = writable.getWriter()
     const root = UnixFS.createDirectoryWriter({ writer })
     assert.equal(root.size, 0)
-    const cid = CID.parse(
+    /** @type {Link.Link} */
+    const cid = Link.parse(
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
     )
 

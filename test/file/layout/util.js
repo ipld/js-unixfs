@@ -3,7 +3,7 @@ import * as Queue from "../../../src/file/layout/queue.js"
 
 /**
  * @param {string} id
- * @returns {UnixFS.CID}
+ * @returns {UnixFS.Link}
  */
 export const createCID = id =>
   // @ts-expect-error - we just mock CID here

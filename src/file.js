@@ -68,7 +68,7 @@ export const write = async (view, bytes) => {
 /**
  * @template T
  * @param {API.View<T>} view
- * @param {API.CloseOptions} [options]
+ * @param {API.CloseOptions} options
  */
 export const close = async (
   view,

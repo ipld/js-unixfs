@@ -2,7 +2,7 @@ import { assert } from "chai"
 import Matrix from "./dataset/convergence_rawdata.js"
 import * as UnixFS from "../src/lib.js"
 import { parseConfig, unpackFile } from "./matrix.js"
-import { CID, collect, iterate, encodeCar, writeFile } from "./util.js"
+import { Link, collect, iterate, encodeCar, writeFile } from "./util.js"
 import { TransformStream } from "@web-std/stream"
 
 /**
@@ -23,8 +23,7 @@ const createTest = spec =>
     const car = encodeCar(readable)
     const ready = writeFile("expect.car", car)
 
-    // @ts-expect-error - see https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59057
-    const stream = /** @type {ReadableStream<Uint8Array>} */ (source.stream())
+    const stream = source.stream()
     const file = UnixFS.createFileWriter({ writer, settings })
     for await (const slice of iterate(stream)) {
       file.write(slice)
@@ -35,7 +34,7 @@ const createTest = spec =>
     await ready
     // console.log((await ready).map(block => `${block.cid}`).join("\n"))
 
-    assert.deepEqual(toV1(link.cid), cid)
+    assert.deepEqual(link.cid.toV1(), cid)
   }
 
 /**
@@ -126,10 +125,3 @@ describe("convergence tests", () => {
     }
   }
 })
-
-/**
- * @param {import('../src/unixfs').CID} cid
- */
-
-const toV1 = cid =>
-  cid.version === 0 ? CID.createV1(cid.code, cid.multihash) : cid

@@ -1,7 +1,6 @@
 import type {
   FileLink as Link,
   File,
-  CID,
   Metadata,
   BlockEncoder,
   MultihashDigest,
@@ -85,13 +84,6 @@ export type RAW = 0x55
 export interface FileEncoder {
   code: PB
   encode(node: File): Uint8Array
-}
-
-export interface CreateCID {
-  <Code extends number, Alg extends number>(
-    code: Code,
-    hash: MultihashDigest<Alg>
-  ): CID<0 | 1, Code, Alg>
 }
 
 export type { MultihashHasher, Link, Metadata }

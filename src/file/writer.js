@@ -283,11 +283,11 @@ const encodeLeaf = function* ({ hasher, linker }, { id, content }, encoder) {
   const cid = linker.createLink(encoder.code, hash)
 
   const block = { cid, bytes }
-  const link = {
+  const link = /** @type {UnixFS.FileLink} */ ({
     cid,
     contentByteLength: content ? content.byteLength : 0,
     dagByteLength: bytes.byteLength,
-  }
+  })
 
   return { id, block, link }
 }
@@ -316,11 +316,11 @@ export const encodeBranch = function* (config, { id, links }, metadata) {
   const hash = yield* Task.wait(Promise.resolve(config.hasher.digest(bytes)))
   const cid = config.linker.createLink(config.fileEncoder.code, hash)
   const block = { bytes, cid }
-  const link = {
+  const link = /** @type {UnixFS.FileLink} */ ({
     cid,
     contentByteLength: UnixFS.cumulativeContentByteLength(links),
     dagByteLength: UnixFS.cumulativeDagByteLength(bytes, links),
-  }
+  })
 
   return { id, block, link }
 }
