@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.0.0-dev](https://github.com/ipld/js-unixfs/compare/v1.1.0-dev...v2.0.0-dev) (2022-10-12)
+## [2.0.0](https://github.com/ipld/js-unixfs/compare/v1.1.0-dev...v2.0.0) (2022-10-12)
 
 
 ### ⚠ BREAKING CHANGES
