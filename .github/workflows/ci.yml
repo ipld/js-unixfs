@@ -12,6 +12,7 @@ on:
     paths:
       - "src**"
       - ".github/workflows/ci.yml"
+      - "package.json"
   workflow_dispatch:
 
 jobs:

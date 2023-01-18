@@ -30,7 +30,6 @@ const encodePB = (data, links) => {
       Data: Data.encode(data).finish(),
       // We can cast to mutable array as we know no mutation occurs there
       Links:
-        // @ts-expect-error https://github.com/ipld/js-dag-pb/pull/59
         /** @type {PB.PBLink[]} */ (links),
     })
   )
@@ -435,7 +434,6 @@ export const decode = bytes => {
     ...decodeMtime(mtime),
   }
   /** @type {UnixFS.PBLink[]} */
-  // @ts-expect-error - https://github.com/ipld/js-dag-pb/pull/59
   const links = pb.Links
 
   switch (message.Type) {
