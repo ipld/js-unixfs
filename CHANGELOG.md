@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.1](https://github.com/ipld/js-unixfs/compare/v2.0.0-dev...v2.0.1) (2023-01-18)
+
+
+### Bug Fixes
+
+* update multiformats ([#39](https://github.com/ipld/js-unixfs/issues/39)) ([2aaed3d](https://github.com/ipld/js-unixfs/commit/2aaed3d50302f89ff482a0794c4186ab4a05e696))
+
+
+### Miscellaneous Chores
+
+* release 2.0.1 ([90d8731](https://github.com/ipld/js-unixfs/commit/90d8731077a98d2fbbe503e058a2c34514dca841))
+
 ## [2.0.0](https://github.com/ipld/js-unixfs/compare/v1.1.0-dev...v2.0.0) (2022-10-12)
 
 
