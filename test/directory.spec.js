@@ -568,8 +568,19 @@ describe("test directory", () => {
     const writer = writable.getWriter()
     const root = UnixFS.createDirectoryWriter({ writer })
 
-    const links0 = root.links()
-    assert(Symbol.iterator in links0)
+    /**
+     * @template T
+     * @param {AsyncIterableIterator<T> | IterableIterator<T>} iterable 
+     */
+    const collect = async iterable => {
+      const links = []
+      for await (const link of iterable) {
+        links.push(link)
+      }
+      return links
+    }
+
+    const links0 = await collect(root.links())
     assert.deepEqual([...links0], [])
     /** @type {Link.Link} */
     const cid = Link.parse(
@@ -583,8 +594,7 @@ describe("test directory", () => {
 
     root.set("file.txt", fileLink)
 
-    const links1 = root.links()
-    assert(Symbol.iterator in links1)
+    const links1 = await collect(root.links())
     assert.deepEqual(
       [...links1],
       [
