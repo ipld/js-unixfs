@@ -30,10 +30,12 @@
     "test:convergence": "mocha test/convergence.js"
   },
   "dependencies": {
-    "multiformats": "^11.0.1",
     "@ipld/dag-pb": "^4.0.0",
+    "@multiformats/murmur3": "^2.1.3",
+    "@perma/map": "^1.0.2",
     "@web-std/stream": "1.0.1",
     "actor": "^2.3.1",
+    "multiformats": "^11.0.1",
     "protobufjs": "^7.1.2",
     "rabin-rs": "^2.1.0"
   },

@@ -21,6 +21,11 @@ export {
   set,
   remove,
 } from "./directory.js"
+export {
+  create as createShardedDirectoryWriter,
+  close as closeShardedDirectory,
+  fork as forkShardedDirectory,
+} from "./sharded-directory.js"
 
 /**
  * @template [Layout=unknown]

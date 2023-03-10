@@ -82,7 +82,7 @@ export interface View<Layout extends unknown = unknown> extends Writer<Layout> {
   readonly writer: BlockWriter
   readonly settings: EncoderSettings<Layout>
 
-  links(): IterableIterator<DirectoryEntryLink>
+  links(): IterableIterator<DirectoryEntryLink> | AsyncIterableIterator<DirectoryEntryLink>
   state: State<Layout>
 
   entries(): IterableIterator<[string, EntryLink]>

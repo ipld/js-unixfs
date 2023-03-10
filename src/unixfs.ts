@@ -6,6 +6,7 @@ import type {
   Link as IPLDLink,
   Version as LinkVersion,
   Block as IPLDBlock,
+  BlockView as IPLDBlockView
 } from "multiformats"
 import { Data, type IData } from "../gen/unixfs.js"
 export type { MultihashHasher, MultibaseEncoder, MultihashDigest, BlockEncoder }
@@ -401,3 +402,10 @@ export interface Block<
   A extends number = number,
   V extends LinkVersion = LinkVersion
 > extends IPLDBlock<T, C, A, V> {}
+
+export interface BlockView<
+  T = unknown,
+  C extends number = number,
+  A extends number = number,
+  V extends LinkVersion = LinkVersion
+> extends IPLDBlockView<T, C, A, V> {}
