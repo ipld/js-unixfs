@@ -568,7 +568,9 @@ describe("test directory", () => {
     const writer = writable.getWriter()
     const root = UnixFS.createDirectoryWriter({ writer })
 
-    assert.deepEqual([...root.links()], [])
+    const links0 = root.links()
+    assert(Symbol.iterator in links0)
+    assert.deepEqual([...links0], [])
     /** @type {Link.Link} */
     const cid = Link.parse(
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
@@ -580,8 +582,11 @@ describe("test directory", () => {
     }
 
     root.set("file.txt", fileLink)
+
+    const links1 = root.links()
+    assert(Symbol.iterator in links1)
     assert.deepEqual(
-      [...root.links()],
+      [...links1],
       [
         {
           name: "file.txt",
