@@ -8,16 +8,16 @@ describe("test directory", () => {
   it("empty dir", async () => {
     const { readable, writable } = new TransformStream()
     const writer = writable.getWriter()
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
     const link = await root.close()
     writer.close()
 
     assert.deepEqual(link, {
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354"
+        "bafybeifoplefg5piy3pjhlp73q7unqx4hwecxeu7opfqfmg352pkpljt6m"
       ),
-      dagByteLength: 4,
+      dagByteLength: 9,
     })
     const output = await collect(readable)
 
@@ -25,7 +25,7 @@ describe("test directory", () => {
       output.map($ => $.cid),
       [
         Link.parse(
-          "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354"
+          "bafybeifoplefg5piy3pjhlp73q7unqx4hwecxeu7opfqfmg352pkpljt6m"
         ),
       ]
     )
@@ -35,7 +35,7 @@ describe("test directory", () => {
     const { readable, writable } = new TransformStream()
     const writer = writable.getWriter()
     const blocks = collect(readable)
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
     const file = UnixFS.createFileWriter(root)
     const content = encodeUTF8("this file does not have much content\n")
     file.write(content)
@@ -54,10 +54,10 @@ describe("test directory", () => {
     const rootLink = await root.close()
 
     assert.deepEqual(rootLink, {
-      dagByteLength: 101,
+      dagByteLength: 133,
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeic7trkgurgp22uhxq5rnii5e75v4m4hf2ovohyxwntm4ymp7myh5i"
+        "bafybeibbyshlpvztob4mtwznmnkzoc4upgcf6ghaulujxglzgmglcdubtm"
       ),
     })
 
@@ -72,8 +72,72 @@ describe("test directory", () => {
           "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
         ),
         Link.parse(
-          "bafybeic7trkgurgp22uhxq5rnii5e75v4m4hf2ovohyxwntm4ymp7myh5i"
+          "bafybeibbyshlpvztob4mtwznmnkzoc4upgcf6ghaulujxglzgmglcdubtm"
         ),
+      ]
+    )
+  })
+
+  it("many files in directory", async () => {
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const blocks = collect(readable)
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
+    const file = UnixFS.createFileWriter(root)
+    const content = encodeUTF8("this file does not have much content\n")
+    file.write(content)
+    const fileLink = await file.close()
+
+    assert.deepEqual(fileLink, {
+      /** @type {Link.Link} */
+      cid: Link.parse(
+        "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
+      ),
+      dagByteLength: 45,
+      contentByteLength: 37,
+    })
+
+    for (let i = 0; i < 100; i++) {
+      root.set(`file${i}.txt`, fileLink)
+    }
+
+    const rootLink = await root.close()
+
+    assert.deepEqual(rootLink, {
+      dagByteLength: 11591,
+      /** @type {Link.Link} */
+      cid: Link.parse(
+        "bafybeidzpkzefoys5ani6qfvrpxyjiolmy6ng445uceov2a33r5bw43qwe"
+      ),
+    })
+
+    writer.close()
+
+    const output = await blocks
+
+    assert.deepEqual(
+      output.map($ => $.cid),
+      [
+        Link.parse("bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"),
+        Link.parse("bafybeic66itcox6c3pozwsktz552f3pd3eanqr74jpvjezchwrkpqemjru"),
+        Link.parse("bafybeigyad752jkaj6qrlgtvovw5dzvhcj7pfvo5pjxkdlzec3kn3qqcoy"),
+        Link.parse("bafybeiflrsirdjonnavtsdg7vb63z7mcnzuymuv6eiwxw2wxqkezhludjm"),
+        Link.parse("bafybeigw2ilsvwhg3uglrmryyuk7dtu4yudr5naerrzb5e7ibmk7rscu3y"),
+        Link.parse("bafybeicprkb6dv56v3ezgj4yffbsueamhkkodfsxvwyaty3okfu6tgq3rm"),
+        Link.parse("bafybeienx5re7fb3s2crypbkkyp5l5zo5xb5bqfxh67ieq2aivgtaw5bqq"),
+        Link.parse("bafybeiewng4vb4elq23cjybjhehg2z3lshskzstxzgrhllyb7jsz2dckdq"),
+        Link.parse("bafybeifz4lbafvzkj7njb3cdr7r3ngl5643jhtghl2ntbvoyx5hocvepvy"),
+        Link.parse("bafybeibperpo4gxoi7x3g7entslorxizzy3imr44hujjqrus4hfs4ekqge"),
+        Link.parse("bafybeiamtplq4n5kdlhorxmougus3y54r52frrvotkduzy7kfgyrepvylu"),
+        Link.parse("bafybeieqvwd6ditluxwzrbvq3ffusuykxbljlqyf7gbf7esi6ake4xh27a"),
+        Link.parse("bafybeigkk3fanqwihj5qautj4yzluxnh3okblouotd2qkreijejdic2fui"),
+        Link.parse("bafybeiafn56xmx6hqgs4ig4yc24cdnbzyghjml6yhg3hmmemkrwl4irluu"),
+        Link.parse("bafybeieu5uzq5jbtuhnaazl36pjygv57virwr3tbdgqujhpya5w7dfosz4"),
+        Link.parse("bafybeid57gn3655jtgnnocwnjznifyltepqoiu3chbawyy2f263hm3qylm"),
+        Link.parse("bafybeig3iwqy4v44nvgyabirtbel6sbk6pzfuwdpzj4z26vczda2nycyrq"),
+        Link.parse("bafybeigrpoorhusehwpw2caoe7mw65xaundu227vcxqv6mqfeo65tcwxqm"),
+        Link.parse("bafybeif3iq6dnq2qixkoqnmyvijplu6x5depgmfgpfncpxkcx5ytajrxxy"),
+        Link.parse("bafybeidzpkzefoys5ani6qfvrpxyjiolmy6ng445uceov2a33r5bw43qwe"),
       ]
     )
   })
@@ -82,16 +146,16 @@ describe("test directory", () => {
     const { readable, writable } = new TransformStream()
     const blocks = collect(readable)
     const writer = writable.getWriter()
-    const root = UnixFS.createDirectoryWriter({ writer })
-    const nested = UnixFS.createDirectoryWriter(root)
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
+    const nested = UnixFS.createShardedDirectoryWriter(root)
 
     root.set("nested", await nested.close())
     assert.deepEqual(await root.close(), {
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeibjme43s5mbvupa25dl3xpbkmuqeje7hefvavy6k7cuhm3nxz2m3q"
+        "bafybeiesoparpjbe5rwoo6liouikyw2nypo6v3d3n36vb334oddrmp52mq"
       ),
-      dagByteLength: 58,
+      dagByteLength: 102,
     })
     writer.close()
 
@@ -99,8 +163,8 @@ describe("test directory", () => {
     assert.deepEqual(
       items.map(({ cid }) => cid.toString()),
       [
-        "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354",
-        "bafybeibjme43s5mbvupa25dl3xpbkmuqeje7hefvavy6k7cuhm3nxz2m3q",
+        "bafybeifoplefg5piy3pjhlp73q7unqx4hwecxeu7opfqfmg352pkpljt6m",
+        "bafybeiesoparpjbe5rwoo6liouikyw2nypo6v3d3n36vb334oddrmp52mq",
       ]
     )
   })
@@ -110,11 +174,11 @@ describe("test directory", () => {
     const blocks = collect(readable)
     const writer = writable.getWriter()
 
-    const root = UnixFS.createDirectoryWriter({ writer })
-    const nested = UnixFS.createDirectoryWriter(root)
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
+    const nested = UnixFS.createShardedDirectoryWriter(root)
 
     root.set("nested", await nested.close())
-    const main = UnixFS.createDirectoryWriter({ writer })
+    const main = UnixFS.createShardedDirectoryWriter({ writer })
     main.set("root", await root.close())
     const link = await main.close()
     writer.close()
@@ -122,9 +186,9 @@ describe("test directory", () => {
     assert.deepEqual(
       items.map(({ cid }) => cid.toString()),
       [
-        "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354",
-        "bafybeibjme43s5mbvupa25dl3xpbkmuqeje7hefvavy6k7cuhm3nxz2m3q",
-        "bafybeifr5xx3ihkbvvodn6xgejnkeuzyak3pwgrbqahb2afazqfes6opla",
+        "bafybeifoplefg5piy3pjhlp73q7unqx4hwecxeu7opfqfmg352pkpljt6m",
+        "bafybeiesoparpjbe5rwoo6liouikyw2nypo6v3d3n36vb334oddrmp52mq",
+        "bafybeifni4qs2xfgtzhk2xw7emp5j7h5ayyw73xizcba2qxry6dc4vqaom",
       ]
     )
   })
@@ -134,7 +198,7 @@ describe("test directory", () => {
     const blocks = collect(readable)
     const writer = writable.getWriter()
 
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
@@ -167,9 +231,9 @@ describe("test directory", () => {
     assert.deepEqual(link, {
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44"
+        "bafybeihxagpxz7lekn7exw6ob526d6pgvnzc3kgtpkbh7ze73e2oc7oxpa"
       ),
-      dagByteLength: 124,
+      dagByteLength: 164,
     })
     writer.close()
     const items = await blocks
@@ -178,7 +242,7 @@ describe("test directory", () => {
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
-        "bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44",
+        "bafybeihxagpxz7lekn7exw6ob526d6pgvnzc3kgtpkbh7ze73e2oc7oxpa",
       ]
     )
   })
@@ -188,7 +252,7 @@ describe("test directory", () => {
     const blocks = collect(readable)
     const writer = writable.getWriter()
 
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
@@ -217,9 +281,9 @@ describe("test directory", () => {
     assert.deepEqual(link, {
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeid6gy6b24lpyqtdmch7chsef4wykmxsh3ysuj2ou3wlz3cevdcc4a"
+        "bafybeibzscho4rtevqlxvlen7te535kvrawffcdry42iol2kr5nr3itjgy"
       ),
-      dagByteLength: 64,
+      dagByteLength: 99,
     })
     writer.close()
     const items = await blocks
@@ -228,7 +292,7 @@ describe("test directory", () => {
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
-        "bafybeid6gy6b24lpyqtdmch7chsef4wykmxsh3ysuj2ou3wlz3cevdcc4a",
+        "bafybeibzscho4rtevqlxvlen7te535kvrawffcdry42iol2kr5nr3itjgy",
       ]
     )
   })
@@ -238,7 +302,7 @@ describe("test directory", () => {
     const writer = writable.getWriter()
     const reader = collect(readable)
 
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
@@ -257,9 +321,9 @@ describe("test directory", () => {
     assert.deepEqual(link, {
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354"
+        "bafybeifoplefg5piy3pjhlp73q7unqx4hwecxeu7opfqfmg352pkpljt6m"
       ),
-      dagByteLength: 4,
+      dagByteLength: 9,
     })
     writer.close()
     const blocks = await reader
@@ -267,7 +331,7 @@ describe("test directory", () => {
       blocks.map(block => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
-        "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354",
+        "bafybeifoplefg5piy3pjhlp73q7unqx4hwecxeu7opfqfmg352pkpljt6m",
       ]
     )
   })
@@ -277,7 +341,7 @@ describe("test directory", () => {
     const writer = writable.getWriter()
     const reader = collect(readable)
 
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
     const hello = await importFile(root, ["hello"])
 
     assert.throws(
@@ -292,7 +356,7 @@ describe("test directory", () => {
     const writer = writable.getWriter()
     const reader = collect(readable)
 
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
@@ -318,9 +382,9 @@ describe("test directory", () => {
     assert.deepEqual(await root.close(), {
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
+        "bafybeihccqhztoqxfi5mmnv55iofsz7slpzq4gnktf3vzycavqbms5eote"
       ),
-      dagByteLength: 66,
+      dagByteLength: 101,
     })
 
     assert.throws(
@@ -335,9 +399,16 @@ describe("test directory", () => {
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
-        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
+        "bafybeihccqhztoqxfi5mmnv55iofsz7slpzq4gnktf3vzycavqbms5eote",
       ]
     )
+
+    try {
+      await root.close()
+      assert.fail()
+    } catch (/** @type {any} */ err) {
+      assert.equal(err.message, "Can not change written HAMT directory, but you can .fork() and make changes to it")
+    }
   })
 
   it("can fork and edit", async () => {
@@ -345,7 +416,7 @@ describe("test directory", () => {
     const writer = writable.getWriter()
     const reader = collect(readable)
 
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
@@ -371,9 +442,9 @@ describe("test directory", () => {
     assert.deepEqual(await root.close(), {
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
+        "bafybeihccqhztoqxfi5mmnv55iofsz7slpzq4gnktf3vzycavqbms5eote"
       ),
-      dagByteLength: 66,
+      dagByteLength: 101,
     })
 
     const fork = root.fork()
@@ -381,9 +452,9 @@ describe("test directory", () => {
     assert.deepEqual(await fork.close(), {
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44"
+        "bafybeihxagpxz7lekn7exw6ob526d6pgvnzc3kgtpkbh7ze73e2oc7oxpa"
       ),
-      dagByteLength: 124,
+      dagByteLength: 164,
     })
 
     writer.close()
@@ -393,8 +464,8 @@ describe("test directory", () => {
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
-        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
-        "bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44",
+        "bafybeihccqhztoqxfi5mmnv55iofsz7slpzq4gnktf3vzycavqbms5eote",
+        "bafybeihxagpxz7lekn7exw6ob526d6pgvnzc3kgtpkbh7ze73e2oc7oxpa",
       ]
     )
   })
@@ -404,16 +475,16 @@ describe("test directory", () => {
     const writer = writable.getWriter()
     const reader = collect(readable)
 
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
     const file = UnixFS.createFileWriter(root)
     file.write(new TextEncoder().encode("hello"))
     root.set("hello", await file.close())
     assert.deepEqual(await root.close({ closeWriter: true }), {
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
+        "bafybeihccqhztoqxfi5mmnv55iofsz7slpzq4gnktf3vzycavqbms5eote"
       ),
-      dagByteLength: 66,
+      dagByteLength: 101,
     })
 
     const blocks = await reader
@@ -421,7 +492,7 @@ describe("test directory", () => {
       blocks.map(block => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
-        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
+        "bafybeihccqhztoqxfi5mmnv55iofsz7slpzq4gnktf3vzycavqbms5eote",
       ]
     )
   })
@@ -431,7 +502,7 @@ describe("test directory", () => {
     const writer = writable.getWriter()
     const reader = collect(readable)
 
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
 
     const hello = await importFile(root, ["hello"])
     assert.deepEqual(hello, {
@@ -457,9 +528,9 @@ describe("test directory", () => {
     assert.deepEqual(await root.close(), {
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq"
+        "bafybeihccqhztoqxfi5mmnv55iofsz7slpzq4gnktf3vzycavqbms5eote"
       ),
-      dagByteLength: 66,
+      dagByteLength: 101,
     })
 
     const patch = new TransformStream()
@@ -471,9 +542,9 @@ describe("test directory", () => {
     assert.deepEqual(await fork.close(), {
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44"
+        "bafybeihxagpxz7lekn7exw6ob526d6pgvnzc3kgtpkbh7ze73e2oc7oxpa"
       ),
-      dagByteLength: 124,
+      dagByteLength: 164,
     })
 
     writer.close()
@@ -483,7 +554,7 @@ describe("test directory", () => {
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
-        "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
+        "bafybeihccqhztoqxfi5mmnv55iofsz7slpzq4gnktf3vzycavqbms5eote",
       ]
     )
 
@@ -491,7 +562,7 @@ describe("test directory", () => {
     const delta = await patchReader
     assert.deepEqual(
       delta.map(block => block.cid.toString()),
-      ["bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44"]
+      ["bafybeihxagpxz7lekn7exw6ob526d6pgvnzc3kgtpkbh7ze73e2oc7oxpa"]
     )
   })
 
@@ -499,7 +570,7 @@ describe("test directory", () => {
     const { readable, writable } = new TransformStream()
     const writer = writable.getWriter()
     const blocks = collect(readable)
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
     const file = UnixFS.createFileWriter(root)
 
     file.write(encodeUTF8("this file does not have much content\n"))
@@ -510,10 +581,10 @@ describe("test directory", () => {
     await blocks
 
     assert.deepEqual(link, {
-      dagByteLength: 101,
+      dagByteLength: 133,
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeic7trkgurgp22uhxq5rnii5e75v4m4hf2ovohyxwntm4ymp7myh5i"
+        "bafybeibbyshlpvztob4mtwznmnkzoc4upgcf6ghaulujxglzgmglcdubtm"
       ),
     })
   })
@@ -522,7 +593,7 @@ describe("test directory", () => {
     const { readable, writable } = new TransformStream()
     const writer = writable.getWriter()
     const blocks = collect(readable)
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
     const file = UnixFS.createFileWriter(root)
 
     file.write(encodeUTF8("this file does not have much content\n"))
@@ -535,10 +606,10 @@ describe("test directory", () => {
     await blocks
 
     assert.deepEqual(link, {
-      dagByteLength: 101,
+      dagByteLength: 133,
       /** @type {Link.Link} */
       cid: Link.parse(
-        "bafybeic7trkgurgp22uhxq5rnii5e75v4m4hf2ovohyxwntm4ymp7myh5i"
+        "bafybeibbyshlpvztob4mtwznmnkzoc4upgcf6ghaulujxglzgmglcdubtm"
       ),
     })
   })
@@ -546,7 +617,7 @@ describe("test directory", () => {
   it("can enumerate entries", async function () {
     const { writable } = new TransformStream()
     const writer = writable.getWriter()
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
 
     assert.deepEqual([...root.entries()], [])
     /** @type {Link.Link} */
@@ -566,7 +637,7 @@ describe("test directory", () => {
   it(".has", async function () {
     const { writable } = new TransformStream()
     const writer = writable.getWriter()
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
     assert.equal(root.has("file.txt"), false)
     /** @type {Link.Link} */
     const cid = Link.parse(
@@ -587,7 +658,7 @@ describe("test directory", () => {
   it(".size", async function () {
     const { writable } = new TransformStream()
     const writer = writable.getWriter()
-    const root = UnixFS.createDirectoryWriter({ writer })
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
     assert.equal(root.size, 0)
     /** @type {Link.Link} */
     const cid = Link.parse(
@@ -603,5 +674,127 @@ describe("test directory", () => {
 
     root.remove("file.txt")
     assert.equal(root.size, 0)
+  })
+
+  it("writer state .clear", async function () {
+    const { writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
+    assert.equal(root.size, 0)
+    /** @type {Link.Link} */
+    const cid = Link.parse(
+      "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
+    )
+
+    const fileLink = {
+      cid,
+      dagByteLength: 45,
+      contentByteLength: 37,
+    }
+    root.set("file.txt", fileLink)
+    assert.equal(root.size, 1)
+
+    root.state.entries.clear()
+    assert.equal(root.size, 0)
+  })
+
+  it("writer state .forEach", async function () {
+    const { writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
+    assert.equal(root.size, 0)
+    /** @type {Link.Link} */
+    const cid = Link.parse(
+      "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
+    )
+
+    const fileLink = {
+      cid,
+      dagByteLength: 45,
+      contentByteLength: 37,
+    }
+    root.set("file.txt", fileLink)
+    assert.equal(root.size, 1)
+    root.state.entries.forEach(entry => assert.deepEqual(entry, fileLink))
+  })
+
+  it("writer state .get", async function () {
+    const { writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
+    assert.equal(root.size, 0)
+    /** @type {Link.Link} */
+    const cid = Link.parse(
+      "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
+    )
+
+    const fileLink = {
+      cid,
+      dagByteLength: 45,
+      contentByteLength: 37,
+    }
+    root.set("file.txt", fileLink)
+    assert.equal(root.size, 1)
+    assert.deepEqual(root.state.entries.get("file.txt"), fileLink)
+  })
+
+  it("writer state .[Symbol.iterator]", async function () {
+    const { writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
+    assert.equal(root.size, 0)
+    /** @type {Link.Link} */
+    const cid = Link.parse(
+      "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
+    )
+
+    const fileLink = {
+      cid,
+      dagByteLength: 45,
+      contentByteLength: 37,
+    }
+    root.set("file.txt", fileLink)
+    assert.equal(root.size, 1)
+    assert.deepEqual([...root.state.entries], [["file.txt", fileLink]])
+  })
+
+  it("writer state .keys", async function () {
+    const { writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
+    assert.equal(root.size, 0)
+    /** @type {Link.Link} */
+    const cid = Link.parse(
+      "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
+    )
+
+    const fileLink = {
+      cid,
+      dagByteLength: 45,
+      contentByteLength: 37,
+    }
+    root.set("file.txt", fileLink)
+    assert.equal(root.size, 1)
+    assert.deepEqual([...root.state.entries.keys()], ["file.txt"])
+  })
+
+  it("writer state .values", async function () {
+    const { writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const root = UnixFS.createShardedDirectoryWriter({ writer })
+    assert.equal(root.size, 0)
+    /** @type {Link.Link} */
+    const cid = Link.parse(
+      "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
+    )
+
+    const fileLink = {
+      cid,
+      dagByteLength: 45,
+      contentByteLength: 37,
+    }
+    root.set("file.txt", fileLink)
+    assert.equal(root.size, 1)
+    assert.deepEqual([...root.state.entries.values()], [fileLink])
   })
 })
