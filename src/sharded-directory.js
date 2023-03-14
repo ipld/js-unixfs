@@ -38,9 +38,7 @@ const asWritable = writer => {
   if (!writer.closed) {
     return writer
   } else {
-    throw new Error(
-      `Can not change written HAMT directory, but you can .fork() and make changes to it`
-    )
+    throw new Error("Can not change written HAMT directory, but you can .fork() and make changes to it")
   }
 }
 
@@ -58,6 +56,7 @@ export const close = async (
   view.state.closed = true
 
   const { entries } = view.state
+  /* c8 ignore next 3 */
   if (!(entries instanceof HashMap)) {
     throw new Error(`not a HAMT: ${entries}`)
   }
@@ -78,6 +77,7 @@ export const close = async (
     // await completion as we don't care when it's taken off the stream.
     writer.write(block)
   }
+  /* c8 ignore next */
   if (root == null) throw new Error("no root block yielded")
 
   if (closeWriter) {
@@ -116,6 +116,7 @@ const iterateBlocks = async function* (hamt, node, settings) {
         yield block
         root = block
       }
+      /* c8 ignore next */
       if (root == null) throw new Error("no root block yielded")
 
       entries.push(/** @type {UnixFS.ShardedDirectoryLink} */ ({
@@ -240,11 +241,12 @@ class HAMTDirectoryWriter {
 /**
  * @implements {Map<string, API.EntryLink>}
  */
-class HashMap {
+class HashMap extends Map {
   /**
    * @param {UnixFSPermaMap.HashMapBuilder} [builder]
    */
   constructor (builder = UnixFSPermaMap.builder()) {
+    super()
     /** @type {UnixFSPermaMap.HashMapBuilder} */
     this.builder = builder
   }
@@ -301,10 +303,6 @@ class HashMap {
 
   [Symbol.iterator]() {
     return this.builder.root.entries()
-  }
-
-  get [Symbol.toStringTag]() {
-    return '[object HashMap]'
   }
 
   entries() {
