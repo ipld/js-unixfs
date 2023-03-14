@@ -1,4 +1,6 @@
-import * as HAMT from "@perma/map/unixfs"
+
+import * as PermaMap from "@perma/map"
+import * as UnixFSPermaMap from "@perma/map/unixfs"
 import * as PB from "@ipld/dag-pb"
 import { murmur364 } from "@multiformats/murmur3"
 import { Block } from 'multiformats/block'
@@ -23,7 +25,7 @@ export const create = ({ writer, settings = defaults(), metadata = {} }) =>
     writer,
     metadata,
     settings,
-    entries: new HAMTMap(),
+    entries: new HashMap(),
     closed: false,
   })
 
@@ -56,11 +58,12 @@ export const close = async (
   view.state.closed = true
 
   const { entries } = view.state
-  if (!(entries instanceof HAMTMap)) {
-    throw new Error(`not a HAMT map: ${entries}`)
+  if (!(entries instanceof HashMap)) {
+    throw new Error(`not a HAMT: ${entries}`)
   }
 
-  const blocks = iterateBlocks(entries.hamt, entries.hamt.root, settings)
+  const hamt = entries.builder.build()
+  const blocks = iterateBlocks(hamt, hamt.root, settings)
 
   /** @type {UnixFS.BlockView<UnixFS.DirectoryShard>?} */
   let root = null
@@ -91,66 +94,15 @@ export const close = async (
 
 /**
  * @template {unknown} Layout
- * @param {{ state: API.State<Layout> }} view
- * @returns {AsyncIterableIterator<UnixFS.DirectoryEntryLink>}
- */
-export const links = ({ state }) => {
-  const { entries } = state
-  if (!(entries instanceof HAMTMap)) {
-    throw new Error(`not a HAMT map: ${entries}`)
-  }
-  return iterateLinks(entries.hamt, entries.hamt.root, state.settings)
-}
-
-/**
- * @template {unknown} Layout
- * @param {HAMT.PersistentHashMap<UnixFS.FileLink | UnixFS.DirectoryLink>} hamt
- * @param {HAMT.BitmapIndexedNode<UnixFS.FileLink | UnixFS.DirectoryLink>} node
- * @param {API.EncoderSettings<Layout>} settings
- * @returns {AsyncIterableIterator<UnixFS.DirectoryEntryLink>}
- */
-const iterateLinks = async function* (hamt, node, settings) {
-  for (const ent of HAMT.iterate(node)) {
-    if ('key' in ent) {
-      yield /** @type {UnixFS.DirectoryEntryLink} */ ({
-        name: `${ent.prefix ?? ''}${ent.key ?? ''}`,
-        dagByteLength: ent.value.dagByteLength,
-        cid: ent.value.cid,
-      })
-    } else {
-      const entries = []
-      for await (const link of iterateLinks(hamt, ent.node, settings)) {
-        entries.push(link)
-      }
-
-      const shard = UnixFS.createDirectoryShard(
-        entries,
-        HAMT.bitField(node),
-        HAMT.tableSize(hamt),
-        murmur364.code
-      )
-      const block = await encodeHAMTShardBlock(shard, settings)
-
-      yield /** @type {UnixFS.ShardedDirectoryLink} */ ({
-        name: ent.prefix,
-        dagByteLength: UnixFS.cumulativeDagByteLength(block.bytes, block.value.entries),
-        cid: block.cid
-      })
-    }
-  }
-}
-
-/**
- * @template {unknown} Layout
- * @param {HAMT.PersistentHashMap<UnixFS.FileLink | UnixFS.DirectoryLink>} hamt
- * @param {HAMT.BitmapIndexedNode<UnixFS.FileLink | UnixFS.DirectoryLink>} node
+ * @param {UnixFSPermaMap.PersistentHashMap<API.EntryLink>} hamt
+ * @param {UnixFSPermaMap.BitmapIndexedNode<API.EntryLink>} node
  * @param {API.EncoderSettings<Layout>} settings
  * @returns {AsyncIterableIterator<UnixFS.BlockView<UnixFS.DirectoryShard>>}
  */
 const iterateBlocks = async function* (hamt, node, settings) {
   /** @type {UnixFS.DirectoryEntryLink[]} */
   const entries = []
-  for (const ent of HAMT.iterate(node)) {
+  for (const ent of UnixFSPermaMap.iterate(node)) {
     if ('key' in ent) {
       entries.push(/** @type {UnixFS.DirectoryEntryLink} */ ({
         name: `${ent.prefix ?? ''}${ent.key ?? ''}`,
@@ -176,8 +128,8 @@ const iterateBlocks = async function* (hamt, node, settings) {
 
   const shard = UnixFS.createDirectoryShard(
     entries,
-    HAMT.bitField(node),
-    HAMT.tableSize(hamt),
+    UnixFSPermaMap.bitField(node),
+    UnixFSPermaMap.tableSize(hamt),
     murmur364.code
   )
   yield await encodeHAMTShardBlock(shard, settings)
@@ -215,7 +167,7 @@ export const fork = (
     writer,
     metadata,
     settings,
-    entries: new HAMTMap(HAMT.from(state.entries.entries())),
+    entries: new HashMap(UnixFSPermaMap.from(state.entries.entries()).createBuilder()),
     closed: false,
   })
 
@@ -235,10 +187,6 @@ class HAMTDirectoryWriter {
   }
   get settings() {
     return this.state.settings
-  }
-
-  links() {
-    return links(this)
   }
 
   /**
@@ -290,29 +238,28 @@ class HAMTDirectoryWriter {
 }
 
 /**
- * Facade for PersistentHashMap that implements Map.
  * @implements {Map<string, API.EntryLink>}
  */
-class HAMTMap {
+class HashMap {
   /**
-   * @param {HAMT.PersistentHashMap<API.EntryLink>} [hamt]
+   * @param {UnixFSPermaMap.HashMapBuilder} [builder]
    */
-  constructor (hamt = HAMT.empty()) {
-    /** @type {HAMT.PersistentHashMap<API.EntryLink>} */
-    this.hamt = hamt
+  constructor (builder = UnixFSPermaMap.builder()) {
+    /** @type {UnixFSPermaMap.HashMapBuilder} */
+    this.builder = builder
   }
 
   clear() {
-    this.hamt = HAMT.empty()
+    this.builder = UnixFSPermaMap.builder()
   }
 
   /**
    * @param {string} key
    */
   delete(key) {
-    const exists = this.hamt.has(key)
-    this.hamt = this.hamt.delete(key)
-    return exists
+    const { root } = this.builder
+    this.builder.delete(key)
+    return this.builder.root !== root
   }
 
   /**
@@ -320,7 +267,7 @@ class HAMTMap {
    * @param {any} [thisArg]
    */
   forEach(callbackfn, thisArg = this) {
-    for (const [k, v] of this.hamt.entries()) {
+    for (const [k, v] of this.builder.root.entries()) {
       callbackfn.call(thisArg, v, k, this)
     }
   }
@@ -329,14 +276,14 @@ class HAMTMap {
    * @param {string} key
    */
   get(key) {
-    return this.hamt.get(key)
+    return PermaMap.get(this.builder, key)
   }
 
   /**
    * @param {string} key
    */
   has(key) {
-    return this.hamt.has(key)
+    return PermaMap.has(this.builder, key)
   }
 
   /**
@@ -344,31 +291,31 @@ class HAMTMap {
    * @param {API.EntryLink} value 
    */
   set(key, value) {
-    this.hamt = this.hamt.set(key, value)
+    this.builder = this.builder.set(key, value)
     return this
   }
 
   get size () {
-    return this.hamt.size
+    return this.builder.size
   }
 
   [Symbol.iterator]() {
-    return this.hamt.entries()
+    return this.builder.root.entries()
   }
 
   get [Symbol.toStringTag]() {
-    return '[object HAMTMap]'
+    return '[object HashMap]'
   }
 
   entries() {
-    return this.hamt.entries()
+    return this.builder.root.entries()
   }
 
   keys() {
-    return this.hamt.keys()
+    return this.builder.root.keys()
   }
 
   values() {
-    return this.hamt.values()
+    return this.builder.root.values()
   }
 }
