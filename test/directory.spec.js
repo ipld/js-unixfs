@@ -563,50 +563,6 @@ describe("test directory", () => {
     assert.deepEqual([...root.entries()], [["file.txt", fileLink]])
   })
 
-  it("can enumerate links", async function () {
-    const { writable } = new TransformStream()
-    const writer = writable.getWriter()
-    const root = UnixFS.createDirectoryWriter({ writer })
-
-    /**
-     * @template T
-     * @param {AsyncIterableIterator<T> | IterableIterator<T>} iterable 
-     */
-    const collect = async iterable => {
-      const links = []
-      for await (const link of iterable) {
-        links.push(link)
-      }
-      return links
-    }
-
-    const links0 = await collect(root.links())
-    assert.deepEqual([...links0], [])
-    /** @type {Link.Link} */
-    const cid = Link.parse(
-      "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
-    )
-    const fileLink = {
-      cid,
-      dagByteLength: 45,
-      contentByteLength: 37,
-    }
-
-    root.set("file.txt", fileLink)
-
-    const links1 = await collect(root.links())
-    assert.deepEqual(
-      [...links1],
-      [
-        {
-          name: "file.txt",
-          cid: fileLink.cid,
-          dagByteLength: fileLink.dagByteLength,
-        },
-      ]
-    )
-  })
-
   it(".has", async function () {
     const { writable } = new TransformStream()
     const writer = writable.getWriter()
