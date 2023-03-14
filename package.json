@@ -49,6 +49,30 @@
       ],
       "dist/src/lib.d.ts": [
         "dist/src/lib.d.ts"
+      ],
+      "file": [
+        "dist/src/file.d.ts"
+      ],
+      "directory": [
+        "dist/src/directory.d.ts"
+      ],
+      "file/layout/trickle": [
+        "dist/src/file/layout/trickle.d.ts"
+      ],
+      "file/layout/balanced": [
+        "dist/src/file/layout/balanced.d.ts"
+      ],
+      "file/layout/queue": [
+        "dist/src/file/layout/queue.d.ts"
+      ],
+      "file/chunker/fixed": [
+        "dist/src/file/chunker/fixed.d.ts"
+      ],
+      "file/chunker/rabin": [
+        "dist/src/file/chunker/rabin.d.ts"
+      ],
+      "file/chunker/buffer": [
+        "dist/src/file/chunker/buffer.d.ts"
       ]
     }
   },
