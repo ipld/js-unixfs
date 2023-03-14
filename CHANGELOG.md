@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/ipld/js-unixfs/compare/v2.0.1...v2.1.0) (2023-03-14)
+
+
+### Features
+
+* add HAMT sharded directories support ([#41](https://github.com/ipld/js-unixfs/issues/41)) ([fb87f9d](https://github.com/ipld/js-unixfs/commit/fb87f9d04ffd4d6ff167dcd9f7148fd735f65beb))
+
 ## [2.0.1](https://github.com/ipld/js-unixfs/compare/v2.0.0-dev...v2.0.1) (2023-01-18)
 
 
