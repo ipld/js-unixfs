@@ -293,7 +293,7 @@ class HashMap extends Map {
    * @param {API.EntryLink} value 
    */
   set(key, value) {
-    this.builder = this.builder.set(key, value)
+    this.builder.set(key, value)
     return this
   }
 
