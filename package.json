@@ -71,7 +71,7 @@
       "types": "./dist/src/file/layout/balanced.d.ts",
       "import": "./src/file/layout/balanced.js"
     },
-    "./src/file/layout/queue": {
+    "./file/layout/queue": {
       "types": "./dist/src/file/layout/queue.d.ts",
       "import": "./src/file/layout/queue.js"
     },
