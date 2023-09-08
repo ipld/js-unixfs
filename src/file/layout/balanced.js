@@ -51,13 +51,13 @@ import * as Chunker from "./../chunker/api.js"
  *                                                           |
  *                                    ------------------------------------------
  *                                    |                                        |
- *                                  (root4)                                  (root6)
+ *                                 (root4)                                  (root6)
  *                                    |                                        |
- *              ----------------------------------------------                 |
- *              |                     |                       |                |
- *           (root1)               (root2)                 (root3)          (root5)
- *              |                     |                       |                |
- *    -----------------       --------|--------       -----------------        |
+ *            -------------------------------------------------                |
+ *            |                       |                       |                |
+ *         (root1)                 (root2)                 (root3)          (root5)
+ *            |                       |                       |                |
+ *    --------|--------       --------|--------       --------|--------        |
  *    |       |       |       |       |       |       |       |       |        |
  * (leaf1) (leaf2) (leaf3) (leaf4) (leaf5) (leaf6) (leaf7) (leaf8) (leaf9) (leaf10)
  * ```
@@ -176,7 +176,7 @@ export const write = (layout, chunks) => {
         leafIndex.push(leaf.id)
       }
 
-      if (leafIndex.length >= layout.width) {
+      if (leafIndex.length > layout.width) {
         return flush({ ...layout, leafIndex, head, lastID }, leaves)
       } else {
         return {
@@ -203,7 +203,7 @@ export const flush = (state, leaves = EMPTY, nodes = [], close = false) => {
   const { width } = state
 
   // Move leaves into nodes
-  while (leafIndex.length >= width || (leafIndex.length > 0 && close)) {
+  while (leafIndex.length > width || (leafIndex.length > 0 && close)) {
     grow(nodeIndex, 1)
     const node = new Node(++lastID, leafIndex.splice(0, width))
     nodeIndex[0].push(node.id)
@@ -216,7 +216,7 @@ export const flush = (state, leaves = EMPTY, nodes = [], close = false) => {
     depth++
 
     while (
-      row.length >= width ||
+      row.length > width ||
       (row.length > 0 && close && depth < nodeIndex.length)
     ) {
       const node = new Node(++lastID, row.splice(0, width))
