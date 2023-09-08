@@ -124,4 +124,72 @@ describe("balanced layout", () => {
       })
     }
   })
+
+  it("overflows into second node at width boundary", () => {
+    let balanced = Balanced.open({ width: 3 })
+    {
+      const { nodes, leaves, layout } = Balanced.write(balanced, [
+        Slice.create([], 0, 4),
+        Slice.create([], 4, 8),
+        Slice.create([], 8, 16),
+      ])
+      assert.deepEqual(nodes, [])
+      assert.deepEqual(leaves, [
+        {
+          id: 1,
+          content: Slice.create([], 0, 4),
+        },
+        {
+          id: 2,
+          content: Slice.create([], 4, 8),
+        },
+        {
+          id: 3,
+          content: Slice.create([], 8, 16),
+        }
+      ])
+
+      balanced = layout
+    }
+
+    {
+      const { nodes, leaves, layout } = Balanced.write(balanced, [
+        Slice.create([], 16, 28),
+      ])
+      assert.deepEqual(leaves, [
+        {
+          id: 4,
+          content: Slice.create([], 16, 28),
+        }
+      ])
+
+      assert.deepEqual(nodes, [
+        {
+          id: 5,
+          children: [1, 2, 3],
+          metadata: undefined,
+        },
+      ])
+
+      balanced = layout
+    }
+
+    {
+      const { root, nodes, leaves } = Balanced.close(balanced, {})
+      assert.deepEqual(leaves, [])
+      assert.deepEqual(nodes, [
+        {
+          id: 6,
+          children: [4],
+          metadata: undefined,
+        },
+      ])
+
+      assert.deepEqual(root, {
+        id: 7,
+        children: [5, 6],
+        metadata: {},
+      })
+    }
+  })
 })
