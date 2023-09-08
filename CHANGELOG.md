@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.2](https://github.com/ipld/js-unixfs/compare/v2.1.1...v2.1.2) (2023-09-08)
+
+
+### Bug Fixes
+
+* queue layout export ([#46](https://github.com/ipld/js-unixfs/issues/46)) ([74a473a](https://github.com/ipld/js-unixfs/commit/74a473a6098e3271cb1359b481d4f8c994f77119))
+* write to balanced layout at width ([#52](https://github.com/ipld/js-unixfs/issues/52)) ([989d96a](https://github.com/ipld/js-unixfs/commit/989d96a52e745295e9e3816402651a52443924ec))
+
 ## [2.1.1](https://github.com/ipld/js-unixfs/compare/v2.1.0...v2.1.1) (2023-03-14)
 
 
