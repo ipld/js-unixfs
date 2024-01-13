@@ -8,7 +8,6 @@ import * as Balanced from "../src/file/layout/balanced.js"
 import * as FixedSize from "../src/file/chunker/fixed.js"
 import * as Rabin from "../src/file/chunker/rabin.js"
 import { sha256 } from "multiformats/hashes/sha2"
-import { TransformStream } from "@web-std/stream"
 
 const CHUNK_SIZE = 262144
 describe("test file", () => {

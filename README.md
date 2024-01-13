@@ -31,7 +31,6 @@ This library provides functionality similar to [ipfs-unixfs-importer][], but it 
 You can encode a file as follows
 
 ```js
-import { TransformStream } from "@web-std/stream"
 import * as UnixFS from "@ipld/unixfs"
 
 // Create a redable & writable streams with internal queue that can

@@ -2,7 +2,6 @@
 import * as unixfs from "../src/codec.js"
 import { assert } from "chai"
 import * as blocks from "./fixtures.js"
-import { fetch } from "./util.js"
 
 const utf8 = new TextEncoder()
 const MURMUR = 0x22
