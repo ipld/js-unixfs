@@ -133,8 +133,5 @@
     "tsv": "^0.2.0",
     "typescript": "^4.8.4"
   },
-  "license": "Apache-2.0 OR MIT",
-  "engines": {
-    "node": ">=20"
-  }
+  "license": "Apache-2.0 OR MIT"
 }
