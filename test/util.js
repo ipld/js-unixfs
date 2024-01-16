@@ -1,6 +1,4 @@
-import { File, Blob } from "@web-std/file"
 import * as Link from "multiformats/link"
-import fetch from "@web-std/fetch"
 import { sha256 } from "multiformats/hashes/sha2"
 import { CarWriter } from "@ipld/car"
 import * as UnixFS from "../src/lib.js"
@@ -143,4 +141,4 @@ export const importFile = async (fs, content) => {
   return await file.close()
 }
 
-export { File, Link, fetch }
+export { Link }

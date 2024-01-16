@@ -1,7 +1,6 @@
 import * as UnixFS from "../src/lib.js"
 import { assert } from "chai"
 import { encodeUTF8, Link, collect, importFile } from "./util.js"
-import { TransformStream } from "@web-std/stream"
 
 describe("UnixFS.createWriter", () => {
   it("UnixFS.createFileWriter", async () => {

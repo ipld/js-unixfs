@@ -1,4 +1,4 @@
-import { Link, File, fetch } from "./util.js"
+import { Link } from "./util.js"
 import * as Trickle from "../src/file/layout/trickle.js"
 import * as Balanced from "../src/file/layout/balanced.js"
 import * as FixedSize from "../src/file/chunker/fixed.js"

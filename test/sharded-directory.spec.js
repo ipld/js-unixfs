@@ -1,5 +1,4 @@
 import * as UnixFS from "../src/lib.js"
-import { TransformStream } from "@web-std/stream"
 import { assert } from "chai"
 import { encodeUTF8, Link, collect, importFile } from "./util.js"
 
