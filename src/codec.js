@@ -406,7 +406,7 @@ export const encodeSymlink = (node, ignoreMetadata = false) => {
       Type: NodeType.Symlink,
       Data: node.content,
       ...encodeMetadata(metadata || BLANK),
-      filesize: BigInt(node.content.byteLength),
+      filesize: 0n,
       blocksizes: [],
       hashType: 0n,
       fanout: 0n,
