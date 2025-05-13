@@ -1,7 +1,7 @@
-import type { Chunker } from "./chunker/api.js"
-import type { Writer as StreamWriter } from "../writer/api.js"
-import type { LayoutEngine, NodeID } from "./layout/api.js"
-import * as UnixFS from "../unixfs.js"
+import type { Chunker } from "./chunker/api.js";
+import type { Writer as StreamWriter } from "../writer/api.js";
+import type { LayoutEngine, NodeID } from "./layout/api.js";
+import * as UnixFS from "../unixfs.js";
 import type {
   Block,
   BlockEncoder,
@@ -9,11 +9,12 @@ import type {
   MultihashDigest,
   Link,
   LinkVersion,
-} from "../unixfs.js"
-import type { State } from "./writer.js"
+} from "../unixfs.js";
+import type { State } from "./writer.js";
 
-export * from "../writer/api.js"
-import * as ChunkerService from "./chunker.js"
+export * from "../writer/api.js";
+import * as ChunkerService from "./chunker.js";
+import init from "rabin-rs/gen/wasm.js";
 
 export type {
   Chunker,
@@ -22,97 +23,104 @@ export type {
   MultihashDigest,
   Block,
   State,
-}
+};
 
 export interface FileWriterService<Layout> extends EncoderSettings<Layout> {
-  writer: BlockWriter
+  writer: BlockWriter;
 }
 
 export interface WriterOptions<Layout extends unknown = unknown> {
-  readonly settings?: EncoderSettings<Layout>
-  readonly metadata?: UnixFS.Metadata
+  readonly settings?: EncoderSettings<Layout>;
+  readonly metadata?: UnixFS.Metadata;
 }
 
 export interface EncoderSettings<Layout extends unknown = unknown> {
   /**
    * Chunker which will be used to split file content into chunks.
    */
-  chunker: Chunker
+  chunker: Chunker;
 
   /**
    * If provided leaves will be encoded as raw blocks, unless file has a
    * metadata. This is what `rawLeaves` options used to be except instead
    * of boolean you pass an encoder that will be used.
    */
-  fileChunkEncoder: FileChunkEncoder
+  fileChunkEncoder: FileChunkEncoder;
 
   /**
    * If provided and file contains single chunk it will be encoded with this
    * encoder. This is what `reduceSingleLeafToSelf` option used to be except
    * instead of boolean you pass an encoder that will be used.
    */
-  smallFileEncoder: FileChunkEncoder
+  smallFileEncoder: FileChunkEncoder;
 
-  fileEncoder: FileEncoder
+  fileEncoder: FileEncoder;
 
   /**
    * Builder that will be used to build file DAG from the leaf nodes.
    */
-  fileLayout: LayoutEngine<Layout>
+  fileLayout: LayoutEngine<Layout>;
 
   /**
    * Hasher used to compute multihash for each block in the file.
    */
-  hasher: MultihashHasher
+  hasher: MultihashHasher;
 
   /**
    * This function is used to create CIDs from multihashes. This is similar
    * to `cidVersion` option except you give it CID creator to use.
    */
-  linker: Linker
+  linker: Linker;
 }
 
+export interface InitOptions {
+  linkMetadataWriter?: LinkMetadataWriter;
+}
+
+export interface LinkMetadataWriter extends StreamWriter<UnixFS.FileLink> {}
+
 export interface Options<Layout = unknown> {
-  writer: BlockWriter
-  metadata?: UnixFS.Metadata
-  settings?: EncoderSettings<Layout>
+  writer: BlockWriter;
+  metadata?: UnixFS.Metadata;
+  settings?: EncoderSettings<Layout>;
+  initOptions?: InitOptions;
 }
 
 export interface CloseOptions {
-  releaseLock?: boolean
-  closeWriter?: boolean
+  releaseLock?: boolean;
+  closeWriter?: boolean;
 }
 
 export interface BlockWriter extends StreamWriter<Block> {}
 
 export interface WritableBlockStream {
-  getWriter(): BlockWriter
+  getWriter(): BlockWriter;
 }
 
 export type FileChunkEncoder =
   | BlockEncoder<PB, Uint8Array>
-  | BlockEncoder<RAW, Uint8Array>
+  | BlockEncoder<RAW, Uint8Array>;
 
 export interface FileEncoder {
-  code: PB
-  encode(node: UnixFS.File): Uint8Array
+  code: PB;
+  encode(node: UnixFS.File): Uint8Array;
 }
 
 export interface Linker<V extends LinkVersion = LinkVersion> {
   createLink<T extends unknown, Code extends number, Alg extends number>(
     code: Code,
     hash: MultihashDigest<Alg>
-  ): Link<T, Code, Alg, V>
+  ): Link<T, Code, Alg, V>;
 }
 
 export interface EncodedFile {
-  id: NodeID
-  block: Block
-  link: UnixFS.FileLink
+  id: NodeID;
+  block: Block;
+  link: UnixFS.FileLink;
 }
 
-export type PB = 0x70
-export type RAW = 0x55
+export type PB = 0x70;
+export type RAW = 0x55;
 
 /**
  * Interface defines API for importable content that is just a subset of `Blob`
@@ -122,9 +130,9 @@ export type RAW = 0x55
  * with optional metadata.
  */
 export interface BlobContent extends BlobMetadata {
-  readonly size: number
+  readonly size: number;
 
-  stream(): ReadableStream<Uint8Array>
+  stream(): ReadableStream<Uint8Array>;
   // text(): Promise<string>
   // arrayBuffer(): Promise<ArrayBuffer>
   // slice(start?: number, end?: number, contentType?: string): Blob
@@ -134,7 +142,7 @@ export interface BlobContent extends BlobMetadata {
  * Optional unixfs metadata.
  */
 export interface BlobMetadata extends UnixFS.Metadata {
-  readonly type: string
+  readonly type: string;
 }
 
 /**
@@ -151,54 +159,54 @@ export interface FileContent extends BlobContent {
    * **Note:** File name is actually used as a file path which is to imply it
    * can contain contains `/` delimiters.
    */
-  readonly name: string
+  readonly name: string;
 }
 
 export type FileState<Layout = unknown> =
   | OpenFile<Layout>
   | ClosedFile<Layout>
-  | LinkedFile
+  | LinkedFile;
 
 export interface FileView<State extends FileState = FileState> {
-  state: State
+  state: State;
 }
 
 export interface OpenFile<Layout = unknown> {
-  readonly type: "file"
-  readonly status: "open"
-  readonly metadata: UnixFS.Metadata
-  readonly service: FileWriterService<Layout>
+  readonly type: "file";
+  readonly status: "open";
+  readonly metadata: UnixFS.Metadata;
+  readonly service: FileWriterService<Layout>;
 
-  writing: boolean
+  writing: boolean;
 
-  chunker: ChunkerService.Chunker
-  layout: Layout
+  chunker: ChunkerService.Chunker;
+  layout: Layout;
 }
 
 export interface ClosedFile<Layout = unknown> {
-  readonly type: "file"
-  readonly status: "closed"
-  readonly service: FileWriterService<Layout>
-  readonly metadata: UnixFS.Metadata
-  writing: boolean
-  chunker: ChunkerService.Chunker
-  layout: Layout
+  readonly type: "file";
+  readonly status: "closed";
+  readonly service: FileWriterService<Layout>;
+  readonly metadata: UnixFS.Metadata;
+  writing: boolean;
+  chunker: ChunkerService.Chunker;
+  layout: Layout;
 }
 
 export interface LinkedFile {
-  readonly type: "file"
-  readonly status: "linked"
+  readonly type: "file";
+  readonly status: "linked";
 
-  state: UnixFS.FileLink
+  state: UnixFS.FileLink;
 }
 
 export interface Writer<T extends unknown = unknown> {
-  write(bytes: Uint8Array): Promise<Writer<T>>
-  close(options?: CloseOptions): Promise<UnixFS.FileLink>
+  write(bytes: Uint8Array): Promise<Writer<T>>;
+  close(options?: CloseOptions): Promise<UnixFS.FileLink>;
 }
 
 export interface View<T extends unknown = unknown> extends Writer<T> {
-  readonly writer: BlockWriter
-  readonly settings: EncoderSettings<T>
-  state: State<T>
+  readonly writer: BlockWriter;
+  readonly settings: EncoderSettings<T>;
+  state: State<T>;
 }

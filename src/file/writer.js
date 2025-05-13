@@ -1,10 +1,10 @@
-import * as Task from "actor"
-import * as API from "./api.js"
-import * as Layout from "./layout/api.js"
-import * as UnixFS from "../codec.js"
-import * as Chunker from "./chunker.js"
-import { EMPTY_BUFFER, panic, unreachable } from "../writer/util.js"
-import * as Queue from "./layout/queue.js"
+import * as Task from "actor";
+import * as API from "./api.js";
+import * as Layout from "./layout/api.js";
+import * as UnixFS from "../codec.js";
+import * as Chunker from "./chunker.js";
+import { EMPTY_BUFFER, panic, unreachable } from "../writer/util.js";
+import * as Queue from "./layout/queue.js";
 
 /**
  * @template Layout
@@ -13,6 +13,7 @@ import * as Queue from "./layout/queue.js"
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
+ * readonly linkMetadataWriter?: API.LinkMetadataWriter
  * chunker: Chunker.Chunker
  * layout: Layout
  * nodeQueue: Queue.Queue
@@ -25,6 +26,7 @@ import * as Queue from "./layout/queue.js"
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
+ * readonly linkMetadataWriter?: API.LinkMetadataWriter
  * readonly rootID: Layout.NodeID
  * readonly end?: Task.Fork<void, never>
  * chunker?: null
@@ -39,6 +41,7 @@ import * as Queue from "./layout/queue.js"
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
+ * readonly linkMetadataWriter?: API.LinkMetadataWriter
  * readonly link: Layout.Link
  * chunker?: null
  * layout?: null
@@ -63,6 +66,7 @@ import * as Queue from "./layout/queue.js"
  * |{type:"write", bytes:Uint8Array}
  * |{type:"link", link:API.EncodedFile}
  * |{type:"block"}
+ * |{type:"linkMetadata"}
  * |{type: "close"}
  * |{type: "end"}
  * } Message
@@ -76,29 +80,33 @@ import * as Queue from "./layout/queue.js"
 export const update = (message, state) => {
   switch (message.type) {
     case "write":
-      return write(state, message.bytes)
+      return write(state, message.bytes);
     case "link":
-      return link(state, message.link)
+      return link(state, message.link);
     /* c8 ignore next 2 */
     case "block":
-      return { state, effect: Task.none() }
+      return { state, effect: Task.none() };
+    /* c8 ignore next 2 */
+    case "linkMetadata":
+      return { state, effect: Task.none() };
     case "close":
-      return close(state)
+      return close(state);
     case "end":
-      return { state, effect: Task.none() }
+      return { state, effect: Task.none() };
     default:
-      return unreachable`File Writer got unknown message ${message}`
+      return unreachable`File Writer got unknown message ${message}`;
   }
-}
+};
 
 /**
  * @template Layout
  * @param {API.BlockWriter} writer
  * @param {UnixFS.Metadata} metadata
  * @param {API.EncoderSettings} config
+ * @param {API.InitOptions} [options]
  * @returns {State<Layout>}
  */
-export const init = (writer, metadata, config) => {
+export const init = (writer, metadata, config, options = {}) => {
   return {
     status: "open",
     metadata,
@@ -116,8 +124,9 @@ export const init = (writer, metadata, config) => {
     // overhead.
     // @see https://github.com/Gozala/vectrie
     nodeQueue: Queue.mutable(),
-  }
-}
+    linkMetadataWriter: options.linkMetadataWriter,
+  };
+};
 /**
  * @template Layout
  * @param {State<Layout>} state
@@ -127,21 +136,21 @@ export const init = (writer, metadata, config) => {
 export const write = (state, bytes) => {
   if (state.status === "open") {
     // Chunk up provided bytes
-    const { chunks, ...chunker } = Chunker.write(state.chunker, bytes)
+    const { chunks, ...chunker } = Chunker.write(state.chunker, bytes);
 
     // Pass chunks to layout engine to produce nodes
     const { nodes, leaves, layout } = state.config.fileLayout.write(
       state.layout,
       chunks
-    )
+    );
 
-    const { linked, ...nodeQueue } = Queue.addNodes(nodes, state.nodeQueue)
+    const { linked, ...nodeQueue } = Queue.addNodes(nodes, state.nodeQueue);
 
     // Create leaf encode tasks for all new leaves
     const tasks = [
       ...encodeLeaves(leaves, state.config),
       ...encodeBranches(linked, state.config),
-    ]
+    ];
 
     return {
       state: {
@@ -153,11 +162,11 @@ export const write = (state, bytes) => {
       effect: Task.listen({
         link: Task.effects(tasks),
       }),
-    }
+    };
   } else {
-    return panic("Unable to perform write on closed file")
+    return panic("Unable to perform write on closed file");
   }
-}
+};
 
 /**
  * @template Layout
@@ -166,9 +175,9 @@ export const write = (state, bytes) => {
  * @returns {Update<Layout>}
  */
 export const link = (state, { id, link, block }) => {
-  let { linked, ...nodeQueue } = Queue.addLink(id, link, state.nodeQueue)
+  let { linked, ...nodeQueue } = Queue.addLink(id, link, state.nodeQueue);
 
-  const tasks = encodeBranches(linked, state.config)
+  const tasks = encodeBranches(linked, state.config);
 
   /** @type {State<Layout>} */
   const newState =
@@ -179,42 +188,54 @@ export const link = (state, { id, link, block }) => {
           link,
           nodeQueue,
         }
-      : { ...state, nodeQueue }
+      : { ...state, nodeQueue };
 
   // If we just linked a root and there is a **suspended** "end" task we create
   // a task to resume it.
   const end =
     state.status === "closed" && id === state.rootID && state.end
       ? state.end.resume()
-      : Task.none()
+      : Task.none();
+
+  if (!state.linkMetadataWriter) {
+    return {
+      state: newState,
+      effect: Task.listen({
+        link: Task.effects(tasks),
+        block: writeBlock(state.writer, block),
+        end,
+      }),
+    };
+  }
 
   return {
     state: newState,
     effect: Task.listen({
       link: Task.effects(tasks),
       block: writeBlock(state.writer, block),
+      linkMetadata: writeLinkMetadata(state.linkMetadataWriter, link),
       end,
     }),
-  }
-}
+  };
+};
 
 /**
  * @template Layout
  * @param {State<Layout>} state
  * @returns {Update<Layout>}
  */
-export const close = state => {
+export const close = (state) => {
   if (state.status === "open") {
-    const { chunks } = Chunker.close(state.chunker)
+    const { chunks } = Chunker.close(state.chunker);
     const { layout, ...write } = state.config.fileLayout.write(
       state.layout,
       chunks
-    )
+    );
 
     const { root, ...close } = state.config.fileLayout.close(
       layout,
       state.metadata
-    )
+    );
 
     const [nodes, leaves] = isLeafNode(root)
       ? [
@@ -224,14 +245,14 @@ export const close = state => {
       : [
           [...write.nodes, ...close.nodes, root],
           [...write.leaves, ...close.leaves],
-        ]
+        ];
 
-    const { linked, ...nodeQueue } = Queue.addNodes(nodes, state.nodeQueue)
+    const { linked, ...nodeQueue } = Queue.addNodes(nodes, state.nodeQueue);
 
     const tasks = [
       ...encodeLeaves(leaves, state.config),
       ...encodeBranches(linked, state.config),
-    ]
+    ];
 
     // We want to keep run loop around until root node is linked. To
     // accomplish this we fork a task that suspends itself, which we will
@@ -239,7 +260,7 @@ export const close = state => {
     // Below we join this forked task in our effect, this way effect is not
     // complete until task forked task is, which will do once we link the
     // root.
-    const fork = Task.fork(Task.suspend())
+    const fork = Task.fork(Task.suspend());
 
     return {
       state: {
@@ -255,11 +276,11 @@ export const close = state => {
         link: Task.effects(tasks),
         end: Task.join(fork),
       }),
-    }
+    };
   } else {
-    return { state, effect: Task.none() }
+    return { state, effect: Task.none() };
   }
-}
+};
 
 /**
  * Creates concurrent leaf encode tasks. Each one will have an ID corresponding
@@ -269,7 +290,7 @@ export const close = state => {
  * @param {API.EncoderSettings} config
  */
 const encodeLeaves = (leaves, config) =>
-  leaves.map(leaf => encodeLeaf(config, leaf, config.fileChunkEncoder))
+  leaves.map((leaf) => encodeLeaf(config, leaf, config.fileChunkEncoder));
 
 /**
  * @param {API.EncoderSettings} config
@@ -278,26 +299,27 @@ const encodeLeaves = (leaves, config) =>
  * @returns {Task.Task<API.EncodedFile, never>}
  */
 const encodeLeaf = function* ({ hasher, linker }, { id, content }, encoder) {
-  const bytes = encoder.encode(content ? asUint8Array(content) : EMPTY_BUFFER)
-  const hash = yield* Task.wait(hasher.digest(bytes))
-  const cid = linker.createLink(encoder.code, hash)
+  const bytes = encoder.encode(content ? asUint8Array(content) : EMPTY_BUFFER);
+  const hash = yield* Task.wait(hasher.digest(bytes));
+  const cid = linker.createLink(encoder.code, hash);
 
-  const block = { cid, bytes }
+  const block = { cid, bytes };
   const link = /** @type {UnixFS.FileLink} */ ({
     cid,
     contentByteLength: content ? content.byteLength : 0,
+    contentByteOffset: content ? content.byteOffset : 0,
     dagByteLength: bytes.byteLength,
-  })
+  });
 
-  return { id, block, link }
-}
+  return { id, block, link };
+};
 
 /**
  * @param {Queue.LinkedNode[]} nodes
  * @param {API.EncoderSettings} config
  */
 const encodeBranches = (nodes, config) =>
-  nodes.map(node => encodeBranch(config, node))
+  nodes.map((node) => encodeBranch(config, node));
 
 /**
  * @template Layout
@@ -312,18 +334,18 @@ export const encodeBranch = function* (config, { id, links }, metadata) {
     layout: "advanced",
     parts: links,
     metadata,
-  })
-  const hash = yield* Task.wait(Promise.resolve(config.hasher.digest(bytes)))
-  const cid = config.linker.createLink(config.fileEncoder.code, hash)
-  const block = { bytes, cid }
+  });
+  const hash = yield* Task.wait(Promise.resolve(config.hasher.digest(bytes)));
+  const cid = config.linker.createLink(config.fileEncoder.code, hash);
+  const block = { bytes, cid };
   const link = /** @type {UnixFS.FileLink} */ ({
     cid,
     contentByteLength: UnixFS.cumulativeContentByteLength(links),
     dagByteLength: UnixFS.cumulativeDagByteLength(bytes, links),
-  })
+  });
 
-  return { id, block, link }
-}
+  return { id, block, link };
+};
 
 /**
  * @param {API.BlockWriter} writer
@@ -333,10 +355,27 @@ export const encodeBranch = function* (config, { id, links }, metadata) {
 
 export const writeBlock = function* (writer, block) {
   if ((writer.desiredSize || 0) <= 0) {
-    yield* Task.wait(writer.ready)
+    yield* Task.wait(writer.ready);
   }
-  writer.write(block)
-}
+  writer.write(block);
+};
+
+/**
+ * @param {API.LinkMetadataWriter} writer
+ * @param {Layout.Link} link
+ * @returns {Task.Task<void, never>}
+ */
+
+export const writeLinkMetadata = function* (writer, link) {
+  /* c8 ignore next 3 */
+  if (!writer) {
+    return;
+  }
+  if ((writer.desiredSize || 0) <= 0) {
+    yield* Task.wait(writer.ready);
+  }
+  writer.write(link);
+};
 
 /**
  *
@@ -344,13 +383,13 @@ export const writeBlock = function* (writer, block) {
  * @returns
  */
 
-const asUint8Array = buffer =>
+const asUint8Array = (buffer) =>
   buffer instanceof Uint8Array
     ? buffer
-    : buffer.copyTo(new Uint8Array(buffer.byteLength), 0)
+    : buffer.copyTo(new Uint8Array(buffer.byteLength), 0);
 
 /**
  * @param {Layout.Node} node
  * @returns {node is Layout.Leaf}
  */
-const isLeafNode = node => node.children == null
+const isLeafNode = (node) => node.children == null;
