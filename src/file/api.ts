@@ -14,7 +14,6 @@ import type { State } from "./writer.js"
 
 export * from "../writer/api.js"
 import * as ChunkerService from "./chunker.js"
-import init from "rabin-rs/gen/wasm.js"
 
 export type {
   Chunker,
@@ -74,10 +73,10 @@ export interface EncoderSettings<Layout extends unknown = unknown> {
 }
 
 export interface InitOptions {
-  linkMetadataWriter?: LinkMetadataWriter
+  unixFsFileLinkWriter?: UnixFsFileLinkWriter
 }
 
-export interface LinkMetadataWriter extends StreamWriter<UnixFS.FileLink> {}
+export interface UnixFsFileLinkWriter extends StreamWriter<UnixFS.FileLink> {}
 
 export interface Options<Layout = unknown> {
   writer: BlockWriter

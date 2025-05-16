@@ -13,7 +13,7 @@ import * as Queue from "./layout/queue.js"
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
- * readonly linkMetadataWriter?: API.LinkMetadataWriter
+ * readonly unixFsFileLinkWriter?: API.UnixFsFileLinkWriter
  * chunker: Chunker.Chunker
  * layout: Layout
  * nodeQueue: Queue.Queue
@@ -26,7 +26,7 @@ import * as Queue from "./layout/queue.js"
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
- * readonly linkMetadataWriter?: API.LinkMetadataWriter
+ * readonly unixFsFileLinkWriter?: API.UnixFsFileLinkWriter
  * readonly rootID: Layout.NodeID
  * readonly end?: Task.Fork<void, never>
  * chunker?: null
@@ -41,7 +41,7 @@ import * as Queue from "./layout/queue.js"
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
- * readonly linkMetadataWriter?: API.LinkMetadataWriter
+ * readonly unixFsFileLinkWriter?: API.UnixFsFileLinkWriter
  * readonly link: Layout.Link
  * chunker?: null
  * layout?: null
@@ -66,7 +66,7 @@ import * as Queue from "./layout/queue.js"
  * |{type:"write", bytes:Uint8Array}
  * |{type:"link", link:API.EncodedFile}
  * |{type:"block"}
- * |{type:"linkMetadata"}
+ * |{type:"fileLink"}
  * |{type: "close"}
  * |{type: "end"}
  * } Message
@@ -87,7 +87,7 @@ export const update = (message, state) => {
     case "block":
       return { state, effect: Task.none() }
     /* c8 ignore next 2 */
-    case "linkMetadata":
+    case "fileLink":
       return { state, effect: Task.none() }
     case "close":
       return close(state)
@@ -124,7 +124,7 @@ export const init = (writer, metadata, config, options = {}) => {
     // overhead.
     // @see https://github.com/Gozala/vectrie
     nodeQueue: Queue.mutable(),
-    linkMetadataWriter: options.linkMetadataWriter,
+    unixFsFileLinkWriter: options.unixFsFileLinkWriter,
   }
 }
 /**
@@ -197,7 +197,7 @@ export const link = (state, { id, link, block }) => {
       ? state.end.resume()
       : Task.none()
 
-  if (!state.linkMetadataWriter) {
+  if (!state.unixFsFileLinkWriter) {
     return {
       state: newState,
       effect: Task.listen({
@@ -213,7 +213,7 @@ export const link = (state, { id, link, block }) => {
     effect: Task.listen({
       link: Task.effects(tasks),
       block: writeBlock(state.writer, block),
-      linkMetadata: writeLinkMetadata(state.linkMetadataWriter, link),
+      fileLink: writeFileLink(state.unixFsFileLinkWriter, link),
       end,
     }),
   }
@@ -361,12 +361,12 @@ export const writeBlock = function* (writer, block) {
 }
 
 /**
- * @param {API.LinkMetadataWriter} writer
+ * @param {API.UnixFsFileLinkWriter} writer
  * @param {Layout.Link} link
  * @returns {Task.Task<void, never>}
  */
 
-export const writeLinkMetadata = function* (writer, link) {
+export const writeFileLink = function* (writer, link) {
   /* c8 ignore next 3 */
   if (!writer) {
     return

@@ -62,23 +62,23 @@ describe("test file", () => {
 
     // Capture links metadata
     /** @type {import('../src/unixfs.js').FileLink[]} */
-    const linkMetadataItems = []
-    const { readable: linkMetadataReadable, writable: linkMetadataWritable } =
+    const fileLinkItems = []
+    const { readable: fileLinkReadable, writable: fileLinkWritable } =
       new TransformStream()
     // Start consuming links stream asynchronously
     void (async () => {
-      const reader = linkMetadataReadable.getReader()
+      const reader = fileLinkReadable.getReader()
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        linkMetadataItems.push(value)
+        fileLinkItems.push(value)
       }
     })()
 
     const file = UnixFS.createFileWriter({
       writer,
       initOptions: {
-        linkMetadataWriter: linkMetadataWritable.getWriter(),
+        unixFsFileLinkWriter: fileLinkWritable.getWriter(),
       },
     })
     for (const rawFile of rawFiles) {
@@ -108,7 +108,7 @@ describe("test file", () => {
       r1.value.cid,
       Link.parse("bafybeihhsdoupgd3fnl3e3367ymsanmikafpllldsdt37jzyoh6nuatowe")
     )
-    const l1 = linkMetadataItems.find((l) => l.cid.equals(r1.value.cid))
+    const l1 = fileLinkItems.find((l) => l.cid.equals(r1.value.cid))
     assert.isTrue(l1 !== undefined)
     assert.equal(l1?.contentByteLength, CHUNK_SIZE)
     assert.equal(l1?.dagByteLength, CHUNK_SIZE + 14)
@@ -123,7 +123,7 @@ describe("test file", () => {
       r2.value.cid,
       Link.parse("bafybeief3dmadxfymhhhrflqytqmlhlz47w6glaxvyzmm6s6tpfb6izzee")
     )
-    const l2 = linkMetadataItems.find((l) => l.cid.equals(r2.value.cid))
+    const l2 = fileLinkItems.find((l) => l.cid.equals(r2.value.cid))
     assert.isTrue(l2 !== undefined)
     assert.equal(l2?.contentByteLength, CHUNK_SIZE)
     assert.equal(l2?.dagByteLength, CHUNK_SIZE + 14)
@@ -138,7 +138,7 @@ describe("test file", () => {
       r3.value.cid,
       Link.parse("bafybeihznihf5g5ibdyoawn7uu3inlyqrxjv63lt6lop6h3w6rzwrp67a4")
     )
-    const l3 = linkMetadataItems.find((l) => l.cid.equals(r3.value.cid))
+    const l3 = fileLinkItems.find((l) => l.cid.equals(r3.value.cid))
     assert.isTrue(l3 !== undefined)
     assert.equal(l3?.contentByteLength, CHUNK_SIZE)
     assert.equal(l3?.dagByteLength, CHUNK_SIZE + 14)
@@ -148,9 +148,9 @@ describe("test file", () => {
 
     // Check root
     assert.isTrue(
-      linkMetadataItems.find((l) => l.cid.equals(link.cid)) !== undefined
+      fileLinkItems.find((l) => l.cid.equals(link.cid)) !== undefined
     )
-    assert.equal(linkMetadataItems.length, 4)
+    assert.equal(fileLinkItems.length, 4)
   })
 
   it("--chunker=size-65535 --trickle=false --raw-leaves=false --cid-version=1", async () => {
