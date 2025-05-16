@@ -1,90 +1,90 @@
 /* eslint-env mocha */
 
-import { assert } from "chai";
-import { encodeUTF8, Link, hashrecur, collect } from "./util.js";
-import * as UnixFS from "../src/lib.js";
-import * as Trickle from "../src/file/layout/trickle.js";
-import * as Balanced from "../src/file/layout/balanced.js";
-import * as FixedSize from "../src/file/chunker/fixed.js";
-import * as Rabin from "../src/file/chunker/rabin.js";
-import { sha256 } from "multiformats/hashes/sha2";
+import { assert } from "chai"
+import { encodeUTF8, Link, hashrecur, collect } from "./util.js"
+import * as UnixFS from "../src/lib.js"
+import * as Trickle from "../src/file/layout/trickle.js"
+import * as Balanced from "../src/file/layout/balanced.js"
+import * as FixedSize from "../src/file/chunker/fixed.js"
+import * as Rabin from "../src/file/chunker/rabin.js"
+import { sha256 } from "multiformats/hashes/sha2"
 
-const CHUNK_SIZE = 262144;
+const CHUNK_SIZE = 262144
 describe("test file", () => {
   it("basic file", async function () {
-    this.timeout(30000);
-    const content = encodeUTF8("this file does not have much content\n");
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
+    this.timeout(30000)
+    const content = encodeUTF8("this file does not have much content\n")
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
 
-    const file = UnixFS.createFileWriter({ writer });
-    await file.write(content);
-    const link = await file.close();
-    writer.close();
+    const file = UnixFS.createFileWriter({ writer })
+    await file.write(content)
+    const link = await file.close()
+    writer.close()
 
-    assert.equal(link.contentByteLength, 37);
-    assert.equal(link.dagByteLength, 45);
+    assert.equal(link.contentByteLength, 37)
+    assert.equal(link.dagByteLength, 45)
     assert.equal(
       link.cid.toString(),
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
-    );
+    )
 
-    const blocks = readable.getReader();
-    const read = await blocks.read();
+    const blocks = readable.getReader()
+    const read = await blocks.read()
     if (read.done) {
-      assert.fail("expected to get a block");
+      assert.fail("expected to get a block")
     }
 
-    const block = read.value;
+    const block = read.value
     assert.deepEqual(
       block.cid.toString(),
       "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
-    );
+    )
 
-    const end = await blocks.read();
-    assert.deepEqual(end, { done: true, value: undefined });
-  });
+    const end = await blocks.read()
+    assert.deepEqual(end, { done: true, value: undefined })
+  })
 
   it("splits into 3 chunks", async function () {
     const rawFiles = [
       new Uint8Array(CHUNK_SIZE).fill(1),
       new Uint8Array(CHUNK_SIZE).fill(2),
       new Uint8Array(CHUNK_SIZE).fill(3),
-    ];
+    ]
     const { readable, writable } = new TransformStream(
       {},
       {},
       {
         highWaterMark: 5,
       }
-    );
-    const writer = writable.getWriter();
+    )
+    const writer = writable.getWriter()
 
     // Capture links metadata
     /** @type {import('../src/unixfs.js').FileLink[]} */
-    const linkMetadataItems = [];
+    const linkMetadataItems = []
     const { readable: linkMetadataReadable, writable: linkMetadataWritable } =
-      new TransformStream();
+      new TransformStream()
     // Start consuming links stream asynchronously
     void (async () => {
-      const reader = linkMetadataReadable.getReader();
+      const reader = linkMetadataReadable.getReader()
       while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        linkMetadataItems.push(value);
+        const { done, value } = await reader.read()
+        if (done) break
+        linkMetadataItems.push(value)
       }
-    })();
+    })()
 
     const file = UnixFS.createFileWriter({
       writer,
       initOptions: {
         linkMetadataWriter: linkMetadataWritable.getWriter(),
       },
-    });
+    })
     for (const rawFile of rawFiles) {
-      file.write(rawFile);
+      file.write(rawFile)
     }
-    const link = await file.close();
+    const link = await file.close()
 
     // Check the root CID
     // TODO: So go-ipfs sets CIDv0 links which casuse a mismatch
@@ -95,67 +95,67 @@ describe("test file", () => {
       cid: Link.parse(
         "bafybeiegda62p2cdi5sono3h3hqjnxwc56z4nocynrj44rz7rtc2p246cy"
       ),
-    });
+    })
 
-    const blocks = readable.getReader();
+    const blocks = readable.getReader()
 
     // Check the first block
-    const r1 = await blocks.read();
+    const r1 = await blocks.read()
     if (r1.done) {
-      assert.fail("expected to get a block");
+      assert.fail("expected to get a block")
     }
     assert.deepEqual(
       r1.value.cid,
       Link.parse("bafybeihhsdoupgd3fnl3e3367ymsanmikafpllldsdt37jzyoh6nuatowe")
-    );
-    const l1 = linkMetadataItems.find((l) => l.cid.equals(r1.value.cid));
-    assert.isTrue(l1 !== undefined);
-    assert.equal(l1?.contentByteLength, CHUNK_SIZE);
-    assert.equal(l1?.dagByteLength, CHUNK_SIZE + 14);
-    assert.equal(l1?.contentByteOffset, 0);
+    )
+    const l1 = linkMetadataItems.find((l) => l.cid.equals(r1.value.cid))
+    assert.isTrue(l1 !== undefined)
+    assert.equal(l1?.contentByteLength, CHUNK_SIZE)
+    assert.equal(l1?.dagByteLength, CHUNK_SIZE + 14)
+    assert.equal(l1?.contentByteOffset, 0)
 
     // Check the second block
-    const r2 = await blocks.read();
+    const r2 = await blocks.read()
     if (r2.done) {
-      assert.fail("expected to get a block");
+      assert.fail("expected to get a block")
     }
     assert.deepEqual(
       r2.value.cid,
       Link.parse("bafybeief3dmadxfymhhhrflqytqmlhlz47w6glaxvyzmm6s6tpfb6izzee")
-    );
-    const l2 = linkMetadataItems.find((l) => l.cid.equals(r2.value.cid));
-    assert.isTrue(l2 !== undefined);
-    assert.equal(l2?.contentByteLength, CHUNK_SIZE);
-    assert.equal(l2?.dagByteLength, CHUNK_SIZE + 14);
-    assert.equal(l2?.contentByteOffset, CHUNK_SIZE);
+    )
+    const l2 = linkMetadataItems.find((l) => l.cid.equals(r2.value.cid))
+    assert.isTrue(l2 !== undefined)
+    assert.equal(l2?.contentByteLength, CHUNK_SIZE)
+    assert.equal(l2?.dagByteLength, CHUNK_SIZE + 14)
+    assert.equal(l2?.contentByteOffset, CHUNK_SIZE)
 
     // Check the third block
-    const r3 = await blocks.read();
+    const r3 = await blocks.read()
     if (r3.done) {
-      assert.fail("expected to get a block");
+      assert.fail("expected to get a block")
     }
     assert.deepEqual(
       r3.value.cid,
       Link.parse("bafybeihznihf5g5ibdyoawn7uu3inlyqrxjv63lt6lop6h3w6rzwrp67a4")
-    );
-    const l3 = linkMetadataItems.find((l) => l.cid.equals(r3.value.cid));
-    assert.isTrue(l3 !== undefined);
-    assert.equal(l3?.contentByteLength, CHUNK_SIZE);
-    assert.equal(l3?.dagByteLength, CHUNK_SIZE + 14);
-    assert.equal(l3?.contentByteOffset, CHUNK_SIZE * 2);
+    )
+    const l3 = linkMetadataItems.find((l) => l.cid.equals(r3.value.cid))
+    assert.isTrue(l3 !== undefined)
+    assert.equal(l3?.contentByteLength, CHUNK_SIZE)
+    assert.equal(l3?.dagByteLength, CHUNK_SIZE + 14)
+    assert.equal(l3?.contentByteOffset, CHUNK_SIZE * 2)
 
-    await writer.close();
+    await writer.close()
 
     // Check root
     assert.isTrue(
       linkMetadataItems.find((l) => l.cid.equals(link.cid)) !== undefined
-    );
-    assert.equal(linkMetadataItems.length, 4);
-  });
+    )
+    assert.equal(linkMetadataItems.length, 4)
+  })
 
   it("--chunker=size-65535 --trickle=false --raw-leaves=false --cid-version=1", async () => {
-    const chunkSize = 65535;
-    const { readable, writable } = new TransformStream();
+    const chunkSize = 65535
+    const { readable, writable } = new TransformStream()
     const settings = {
       chunker: FixedSize.withMaxChunkSize(chunkSize),
       fileChunkEncoder: UnixFS.UnixFSLeaf,
@@ -164,24 +164,24 @@ describe("test file", () => {
       linker: { createLink: Link.create },
       hasher: sha256,
       fileEncoder: UnixFS,
-    };
-    const writer = writable.getWriter();
-    collect(readable);
+    }
+    const writer = writable.getWriter()
+    collect(readable)
 
-    const file = UnixFS.createFileWriter({ writer, settings });
+    const file = UnixFS.createFileWriter({ writer, settings })
 
-    const size = Math.round(chunkSize * 2.2);
-    const FRAME = Math.round(size / 10);
-    let offset = 0;
-    let n = 0;
+    const size = Math.round(chunkSize * 2.2)
+    const FRAME = Math.round(size / 10)
+    let offset = 0
+    let n = 0
     while (offset < size) {
-      const slice = new Uint8Array(Math.min(FRAME, size - offset)).fill(++n);
-      file.write(slice);
-      offset += FRAME;
+      const slice = new Uint8Array(Math.min(FRAME, size - offset)).fill(++n)
+      file.write(slice)
+      offset += FRAME
     }
 
-    const link = await file.close();
-    console.log("link", link);
+    const link = await file.close()
+    console.log("link", link)
     assert.deepEqual(link, {
       /** @type {Link.Link} */
       cid: Link.parse(
@@ -189,63 +189,63 @@ describe("test file", () => {
       ),
       contentByteLength: 144177,
       dagByteLength: 144372,
-    });
+    })
 
-    await writer.close();
-  });
+    await writer.close()
+  })
 
   it("chunks with rabin chunker", async function () {
-    this.timeout(30000);
+    this.timeout(30000)
     const content = hashrecur({
       byteLength: CHUNK_SIZE * 2,
-    });
-    const chunker = await Rabin.create();
+    })
+    const chunker = await Rabin.create()
 
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
 
-    const settings = UnixFS.configure({ chunker });
+    const settings = UnixFS.configure({ chunker })
 
-    const collector = collect(readable);
-    const file = UnixFS.createFileWriter({ writer, settings });
+    const collector = collect(readable)
+    const file = UnixFS.createFileWriter({ writer, settings })
 
     for await (const slice of content) {
-      file.write(slice);
+      file.write(slice)
     }
-    const link = await file.close();
-    writer.close();
-    const blocks = await collector;
+    const link = await file.close()
+    writer.close()
+    const blocks = await collector
 
     assert.deepEqual(
       link.cid,
       Link.parse("bafybeicj5kf4mohavbbh4j5izwy3k23cysewxfhgtmlaoxq6sewx2tsr7u")
-    );
+    )
 
-    assert.deepEqual((await blocks).length, 4);
-  });
+    assert.deepEqual((await blocks).length, 4)
+  })
 
   it("trickle layout", async function () {
-    this.timeout(30000);
+    this.timeout(30000)
     const content = hashrecur({
       byteLength: CHUNK_SIZE * 2,
-    });
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
+    })
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
     const settings = UnixFS.configure({
       chunker: FixedSize.withMaxChunkSize(1300),
       fileLayout: Trickle,
       fileChunkEncoder: UnixFS.UnixFSRawLeaf,
-    });
+    })
 
-    const file = UnixFS.createFileWriter({ writer, settings });
-    const collector = collect(readable);
+    const file = UnixFS.createFileWriter({ writer, settings })
+    const collector = collect(readable)
 
     for await (const slice of content) {
-      file.write(slice);
+      file.write(slice)
     }
-    const link = await file.close();
-    writer.close();
-    const blocks = await collector;
+    const link = await file.close()
+    writer.close()
+    const blocks = await collector
 
     assert.deepEqual(link, {
       /** @type {Link.Link} */
@@ -254,32 +254,32 @@ describe("test file", () => {
       ),
       contentByteLength: 524288,
       dagByteLength: 548251,
-    });
-  });
+    })
+  })
 
   it("trickle layout with overflow", async function () {
-    this.timeout(30000);
+    this.timeout(30000)
     const content = hashrecur({
       byteLength: CHUNK_SIZE * 2,
-    });
-    const { readable, writable } = new TransformStream();
+    })
+    const { readable, writable } = new TransformStream()
 
-    const writer = writable.getWriter();
+    const writer = writable.getWriter()
     const settings = UnixFS.configure({
       chunker: FixedSize.withMaxChunkSize(100000),
       fileLayout: Trickle.configure({ maxDirectLeaves: 5 }),
       fileChunkEncoder: UnixFS.UnixFSRawLeaf,
-    });
+    })
 
-    const blocks = collect(readable);
-    const file = UnixFS.createFileWriter({ writer, settings });
+    const blocks = collect(readable)
+    const file = UnixFS.createFileWriter({ writer, settings })
 
     for await (const slice of content) {
-      file.write(slice);
+      file.write(slice)
     }
-    const link = await file.close();
-    writer.close();
-    await blocks;
+    const link = await file.close()
+    writer.close()
+    await blocks
 
     assert.deepEqual(link, {
       /** @type {Link.Link} */
@@ -288,34 +288,34 @@ describe("test file", () => {
       ),
       contentByteLength: 524288,
       dagByteLength: 524738,
-    });
-  });
+    })
+  })
 
   it("trickle with several levels deep", async function () {
-    this.timeout(30000);
-    const chunkSize = 128;
-    const maxLeaves = 4;
-    const leafCount = 42;
+    this.timeout(30000)
+    const chunkSize = 128
+    const maxLeaves = 4
+    const leafCount = 42
 
-    const content = hashrecur({ byteLength: chunkSize * leafCount });
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
+    const content = hashrecur({ byteLength: chunkSize * leafCount })
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
 
     const settings = UnixFS.configure({
       chunker: FixedSize.withMaxChunkSize(chunkSize),
       fileLayout: Trickle.configure({ maxDirectLeaves: maxLeaves }),
       fileChunkEncoder: UnixFS.UnixFSRawLeaf,
-    });
+    })
 
-    const blocks = collect(readable);
-    const file = UnixFS.createFileWriter({ writer, settings });
+    const blocks = collect(readable)
+    const file = UnixFS.createFileWriter({ writer, settings })
 
     for await (const slice of content) {
-      file.write(slice);
+      file.write(slice)
     }
-    const link = await file.close();
-    writer.close();
-    await blocks;
+    const link = await file.close()
+    writer.close()
+    await blocks
 
     assert.deepEqual(link, {
       /** @type {Link.Link} */
@@ -324,19 +324,19 @@ describe("test file", () => {
       ),
       contentByteLength: chunkSize * leafCount,
       dagByteLength: 8411,
-    });
-  });
+    })
+  })
 
   it("write empty with defaults", async function () {
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
-    const file = UnixFS.createFileWriter({ writer });
-    const blocks = collect(readable);
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const file = UnixFS.createFileWriter({ writer })
+    const blocks = collect(readable)
 
-    file.write(new Uint8Array());
-    const link = await file.close();
-    writer.close();
-    await blocks;
+    file.write(new Uint8Array())
+    const link = await file.close()
+    writer.close()
+    await blocks
 
     assert.deepEqual(link, {
       /** @type {Link.Link} */
@@ -346,18 +346,18 @@ describe("test file", () => {
       contentByteLength: 0,
       contentByteOffset: 0,
       dagByteLength: 6,
-    });
-  });
+    })
+  })
 
   it("can close writer", async function () {
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
-    const file = UnixFS.createFileWriter({ writer });
-    const blocks = collect(readable);
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const file = UnixFS.createFileWriter({ writer })
+    const blocks = collect(readable)
 
-    file.write(encodeUTF8("this file does not have much content\n"));
-    const link = await file.close({ closeWriter: true });
-    await blocks;
+    file.write(encodeUTF8("this file does not have much content\n"))
+    const link = await file.close({ closeWriter: true })
+    await blocks
 
     assert.deepEqual(link, {
       /** @type {Link.Link} */
@@ -367,21 +367,21 @@ describe("test file", () => {
       contentByteLength: 37,
       contentByteOffset: 0,
       dagByteLength: 45,
-    });
-  });
+    })
+  })
 
   it("can release writer lock", async function () {
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
-    const file = UnixFS.createFileWriter({ writer });
-    const blocks = collect(readable);
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const file = UnixFS.createFileWriter({ writer })
+    const blocks = collect(readable)
 
-    file.write(encodeUTF8("this file does not have much content\n"));
-    const link = await file.close({ releaseLock: true });
-    assert.equal(writable.locked, false);
+    file.write(encodeUTF8("this file does not have much content\n"))
+    const link = await file.close({ releaseLock: true })
+    assert.equal(writable.locked, false)
 
-    writable.close();
-    await blocks;
+    writable.close()
+    await blocks
 
     assert.deepEqual(link, {
       /** @type {Link.Link} */
@@ -391,23 +391,23 @@ describe("test file", () => {
       contentByteLength: 37,
       contentByteOffset: 0,
       dagByteLength: 45,
-    });
-  });
+    })
+  })
 
   it("can create writer from writer", async function () {
-    const { readable, writable } = new TransformStream();
-    const writer = writable.getWriter();
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
     const settings = UnixFS.configure({
       chunker: FixedSize.withMaxChunkSize(18),
-    });
+    })
 
     const file = UnixFS.createFileWriter({
       writer,
       settings,
-    });
+    })
 
-    const file2 = UnixFS.createFileWriter(file);
-    assert.equal(file2.writer, writer);
-    assert.deepEqual(file2.settings, settings);
-  });
-});
+    const file2 = UnixFS.createFileWriter(file)
+    assert.equal(file2.writer, writer)
+    assert.deepEqual(file2.settings, settings)
+  })
+})

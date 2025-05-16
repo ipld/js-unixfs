@@ -7,20 +7,20 @@ import type {
   Version as LinkVersion,
   Block as IPLDBlock,
   BlockView as IPLDBlockView,
-} from "multiformats";
-import { Data, type IData } from "../gen/unixfs.js";
+} from "multiformats"
+import { Data, type IData } from "../gen/unixfs.js"
 export type {
   MultihashHasher,
   MultibaseEncoder,
   MultihashDigest,
   BlockEncoder,
-};
-export * as Layout from "./file/layout/api";
+}
+export * as Layout from "./file/layout/api"
 
-import NodeType = Data.DataType;
+import NodeType = Data.DataType
 
-export { NodeType };
-export type { IData, LinkVersion };
+export { NodeType }
+export type { IData, LinkVersion }
 
 /**
  * Type representing any UnixFS node.
@@ -33,9 +33,9 @@ export type Node =
   | Directory
   | DirectoryShard
   | ShardedDirectory
-  | Symlink;
+  | Symlink
 
-export type File = SimpleFile | AdvancedFile | ComplexFile;
+export type File = SimpleFile | AdvancedFile | ComplexFile
 
 /**
  * Logical representation of a file that fits a single block. Note this is only
@@ -43,16 +43,16 @@ export type File = SimpleFile | AdvancedFile | ComplexFile;
  * depending on where you encounter the node (In root of the DAG or not).
  */
 export interface SimpleFile {
-  readonly metadata?: Metadata;
+  readonly metadata?: Metadata
 
-  readonly type: NodeType.File;
-  readonly layout: "simple";
-  readonly content: Uint8Array;
+  readonly type: NodeType.File
+  readonly layout: "simple"
+  readonly content: Uint8Array
 }
 
 export interface Metadata {
-  readonly mode?: Mode;
-  readonly mtime?: MTime;
+  readonly mode?: Mode
+  readonly mtime?: MTime
 }
 
 /**
@@ -63,14 +63,14 @@ export interface Metadata {
  */
 
 export interface AdvancedFile {
-  readonly metadata?: Metadata;
+  readonly metadata?: Metadata
 
-  readonly type: NodeType.File;
-  readonly layout: "advanced";
-  readonly parts: ReadonlyArray<FileLink>;
+  readonly type: NodeType.File
+  readonly layout: "advanced"
+  readonly parts: ReadonlyArray<FileLink>
 }
 
-export type Chunk = Raw | FileChunk;
+export type Chunk = Raw | FileChunk
 
 /**
  * Encodes UnixFS Raw node (a leaf node of the file DAG layout). This
@@ -93,12 +93,12 @@ export type Chunk = Raw | FileChunk;
  * @deprecated
  */
 export interface Raw {
-  readonly type: NodeType.Raw;
+  readonly type: NodeType.Raw
 
   /**
    * Raw bytes of the content
    */
-  readonly content: Uint8Array;
+  readonly content: Uint8Array
 }
 
 /**
@@ -126,11 +126,11 @@ export interface Raw {
  * take `mode` and `mtime` fields into account.
  */
 export interface FileChunk {
-  readonly type: NodeType.File;
-  readonly layout: "simple";
-  readonly content: Uint8Array;
+  readonly type: NodeType.File
+  readonly layout: "simple"
+  readonly content: Uint8Array
 
-  readonly metadata?: Metadata;
+  readonly metadata?: Metadata
 }
 
 /**
@@ -151,26 +151,26 @@ export interface FileChunk {
  * in any other position (that is ignore `mode`, `mtime` fileds).
  */
 export interface FileShard {
-  readonly type: NodeType.File;
-  readonly layout: "advanced";
-  readonly parts: ReadonlyArray<FileLink>;
+  readonly type: NodeType.File
+  readonly layout: "advanced"
+  readonly parts: ReadonlyArray<FileLink>
 }
 
 export type FileLink =
   | ContentDAGLink<Uint8Array>
   | ContentDAGLink<Chunk>
-  | ContentDAGLink<FileShard>;
+  | ContentDAGLink<FileShard>
 
 export interface ContentDAGLink<T> extends DAGLink<T> {
   /**
    * Total number of bytes in the file
    */
-  readonly contentByteLength: number;
+  readonly contentByteLength: number
 
   /**
    * Offset bytes in the file
    */
-  readonly contentByteOffset?: number;
+  readonly contentByteOffset?: number
 }
 
 /**
@@ -180,13 +180,13 @@ export interface DAGLink<T = unknown> extends Phantom<T> {
   /**
    * *C*ontent *Id*entifier of the target DAG.
    */
-  readonly cid: Link<T>;
+  readonly cid: Link<T>
 
   /**
    * Cumulative number of bytes in the target DAG, that is number of bytes in
    * the block and all the blocks it links to.
    */
-  readonly dagByteLength: number;
+  readonly dagByteLength: number
 }
 /**
  * These type of nodes are not produces by referenece IPFS implementations, yet
@@ -202,13 +202,13 @@ export interface DAGLink<T = unknown> extends Phantom<T> {
  * @deprecated
  */
 export interface ComplexFile {
-  readonly type: NodeType.File;
-  readonly layout: "complex";
-  readonly content: Uint8Array;
+  readonly type: NodeType.File
+  readonly layout: "complex"
+  readonly content: Uint8Array
 
-  readonly parts: ReadonlyArray<FileLink>;
+  readonly parts: ReadonlyArray<FileLink>
 
-  readonly metadata?: Metadata;
+  readonly metadata?: Metadata
 }
 
 /**
@@ -217,38 +217,38 @@ export interface ComplexFile {
  * the other definitions.
  */
 export interface UnknownFile {
-  readonly type: NodeType.File;
+  readonly type: NodeType.File
 
-  readonly content?: Uint8Array;
-  readonly parts?: ReadonlyArray<FileLink>;
+  readonly content?: Uint8Array
+  readonly parts?: ReadonlyArray<FileLink>
 
-  readonly metadata?: Metadata;
+  readonly metadata?: Metadata
 }
 
 /**
  * Type for either UnixFS directory representation.
  */
-export type Directory = FlatDirectory | ShardedDirectory;
+export type Directory = FlatDirectory | ShardedDirectory
 
 /**
  * Logacal representation of a directory that fits single block.
  */
 export interface FlatDirectory {
-  readonly type: NodeType.Directory;
-  readonly entries: ReadonlyArray<DirectoryEntryLink>;
+  readonly type: NodeType.Directory
+  readonly entries: ReadonlyArray<DirectoryEntryLink>
 
-  readonly metadata?: Metadata;
+  readonly metadata?: Metadata
 }
 
 export type DirectoryEntryLink =
   | NamedDAGLink<File>
   | NamedDAGLink<Directory>
-  | NamedDAGLink<Uint8Array>;
+  | NamedDAGLink<Uint8Array>
 
-export type DirectoryLink = DAGLink<Directory>;
+export type DirectoryLink = DAGLink<Directory>
 
 export interface NamedDAGLink<T> extends DAGLink<T> {
-  readonly name: string;
+  readonly name: string
 }
 
 /**
@@ -269,43 +269,43 @@ export interface ShardedDirectory extends DirectoryShard {}
  * `mtime` and `mode` field to be ignored.
  */
 export interface DirectoryShard {
-  readonly type: NodeType.HAMTShard;
+  readonly type: NodeType.HAMTShard
 
-  readonly bitfield: Uint8Array;
+  readonly bitfield: Uint8Array
   /*
    * HAMT table width (In IPFS it's usually 256)
    */
-  readonly fanout: uint64;
+  readonly fanout: uint64
   /**
    * Multihash code for the hashing function used (In IPFS it's [murmur3-64][])
    *
    * [murmur3-64]:https://github.com/multiformats/multicodec/blob/master/table.csv#L24
    */
-  readonly hashType: uint64;
+  readonly hashType: uint64
 
-  readonly entries: ReadonlyArray<ShardedDirectoryLink>;
+  readonly entries: ReadonlyArray<ShardedDirectoryLink>
 
-  readonly metadata?: Metadata;
+  readonly metadata?: Metadata
 }
 
 export type ShardedDirectoryLink =
   | NamedDAGLink<File>
   | NamedDAGLink<Uint8Array>
   | NamedDAGLink<Directory>
-  | NamedDAGLink<DirectoryShard>;
+  | NamedDAGLink<DirectoryShard>
 /**
  * Logical representation of a [symbolic link][].
  *
  * [symbolic link]:https://en.wikipedia.org/wiki/Symbolic_link
  */
 export interface Symlink {
-  readonly type: NodeType.Symlink;
+  readonly type: NodeType.Symlink
   /**
    * UTF-8 encoded path to the symlink target.
    */
-  readonly content: ByteView<string>;
+  readonly content: ByteView<string>
 
-  readonly metadata?: Metadata;
+  readonly metadata?: Metadata
 }
 
 /**
@@ -317,14 +317,14 @@ export interface UnixTime {
    * (signed 64bit integer): represents the amount of seconds after or before
    * the epoch.
    */
-  readonly Seconds: int64;
+  readonly Seconds: int64
 
   /**
    * (optional, 32bit unsigned integer ): when specified represents the
    * fractional part of the mtime as the amount of nanoseconds. The valid
    * range for this value are the integers [1, 999999999].
    */
-  readonly FractionalNanoseconds?: fixed32;
+  readonly FractionalNanoseconds?: fixed32
 }
 
 /**
@@ -350,15 +350,15 @@ export interface UnixTime {
  * 
  * @see https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/sys_stat.h.html
  */
-export type Mode = uint32;
+export type Mode = uint32
 
 /**
  * representing the modification time in seconds relative to the unix epoch
  * 1970-01-01T00:00:00Z.
  */
 export interface MTime {
-  readonly secs: number;
-  readonly nsecs?: number;
+  readonly secs: number
+  readonly nsecs?: number
 }
 
 /**
@@ -370,15 +370,15 @@ export interface ByteView<Data> extends Uint8Array, Phantom<Data> {}
 /**
  * @see https://github.com/ipfs/go-bitfield
  */
-export type Bitfield = Uint8Array;
+export type Bitfield = Uint8Array
 
 // TS does not really have these, create aliases so it's aligned closer
 // to protobuf spec
-export type int64 = number;
-export type fixed32 = number;
-export type uint64 = number;
+export type int64 = number
+export type fixed32 = number
+export type uint64 = number
 
-export type uint32 = number;
+export type uint32 = number
 
 /**
  * This is an utility type to retain unused type parameter `T`. It can be used
@@ -388,10 +388,10 @@ export interface Phantom<T> {
   // This field can not be represented because field name is non-existings
   // unique symbol. But given that field is optional any object will valid
   // type contstraint.
-  [PhantomKey]?: T;
+  [PhantomKey]?: T
 }
 
-declare const PhantomKey: unique symbol;
+declare const PhantomKey: unique symbol
 
 export interface Link<
   Data extends unknown = unknown,
@@ -401,9 +401,9 @@ export interface Link<
 > extends IPLDLink<Data, Format, Alg, V> {}
 
 export interface PBLink {
-  Name?: string;
-  Tsize?: number;
-  Hash: Link;
+  Name?: string
+  Tsize?: number
+  Hash: Link
 }
 
 export interface Block<

@@ -14,7 +14,7 @@ import type {
   MultihashHasher,
   MultihashDigest,
   EncodedFile,
-} from "./file.js";
+} from "./file.js"
 
 import type {
   DirectoryEntry,
@@ -22,8 +22,8 @@ import type {
   View as DirectoryWriterView,
   Options as DirectoryWriterOptions,
   State as DirectoryWriterState,
-} from "./directory.js";
-import { Metadata, FileLink } from "./unixfs.js";
+} from "./directory.js"
+import { Metadata, FileLink } from "./unixfs.js"
 
 export type {
   WriterOptions,
@@ -48,7 +48,7 @@ export type {
   MultihashDigest,
   Metadata,
   FileLink,
-};
+}
 
 /**
  *
@@ -57,7 +57,7 @@ export interface Writer {
   /**
    * Closes this writer and corresponding
    */
-  close(options?: CloseOptions): Promise<this>;
+  close(options?: CloseOptions): Promise<this>
 }
 
 /**
@@ -71,12 +71,12 @@ export interface View<L extends unknown = unknown> extends Writer {
   /**
    * Underlaying stream where [UnixFS][] blocks will be written into.
    */
-  readonly writer: BlockWriter;
+  readonly writer: BlockWriter
   /**
    * Encoder configuration of this writer.
    */
 
-  readonly settings: EncoderSettings<L>;
+  readonly settings: EncoderSettings<L>
 
   /**
    * Creates new file writer that will write blocks into the same underlying
@@ -85,7 +85,7 @@ export interface View<L extends unknown = unknown> extends Writer {
    */
   createFileWriter<Layout>(
     settings?: WriterOptions<Layout>
-  ): FileWriterView<L | Layout>;
+  ): FileWriterView<L | Layout>
 
   /**
    * Creates new directory writer that will write blocks into the same
@@ -95,10 +95,10 @@ export interface View<L extends unknown = unknown> extends Writer {
    */
   createDirectoryWriter<Layout>(
     settings?: WriterOptions<Layout>
-  ): DirectoryWriterView<L | Layout>;
+  ): DirectoryWriterView<L | Layout>
 }
 
 export interface Options<Layout extends unknown = unknown> {
-  writable: WritableBlockStream;
-  settings?: EncoderSettings<Layout>;
+  writable: WritableBlockStream
+  settings?: EncoderSettings<Layout>
 }
