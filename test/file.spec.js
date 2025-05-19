@@ -173,7 +173,7 @@ describe("test file", () => {
     assert.deepEqual((await blocks).length, 4)
   })
 
-  it("trickle layout", async function (t) {
+  it("trickle layout", async function () {
     this.timeout(30000)
     const content = hashrecur({
       byteLength: CHUNK_SIZE * 2,
