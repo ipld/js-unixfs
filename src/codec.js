@@ -170,7 +170,7 @@ export const encodeRaw = content =>
       
       Type: NodeType.Raw,
       Data: content.byteLength > 0 ? content : EMPTY_BUFFER,
-      filesize: BigInt(content.byteLength),
+      filesize: content.length === 0 ? Object.assign(0n, { __forceEncode: true }) : BigInt(content.length),
       // @ts-ignore
       blocksizes: EMPTY,
       fanout: 0n,
@@ -270,7 +270,7 @@ export const encodeSimpleFile = (content, metadata = BLANK) =>
       // which `Data` is omitted but filesize and blocksizes are present.
       // For the sake of hash consistency we do the same.
       Data: content.byteLength > 0 ? content : EMPTY_BUFFER,
-      filesize: content.byteLength === 0 ? 0n : BigInt(content.byteLength),
+      filesize: content.length === 0 ? Object.assign(0n, { __forceEncode: true }) : BigInt(content.length),
       blocksizes: [],
       ...encodeMetadata(metadata),
       hashType: 0n,
