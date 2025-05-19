@@ -373,11 +373,6 @@ const readInt = n => {
 }
 
 /**
- * @param {Uint8Array} bytes
- */
-const readData = bytes => (bytes.byteLength > 0 ? bytes : undefined)
-
-/**
  * @param {Uint8Array} path
  * @param {UnixFS.Metadata} [metadata]
  * @returns {UnixFS.Symlink}
@@ -501,18 +496,6 @@ const decodeMtime = mtime =>
         mtime: { secs: mtime.Seconds, nsecs: mtime.FractionalNanoseconds },
       }
 
-/**
- * @param {NodeType} type
- * @param {number[]|undefined} blocksizes
- */
-const decodeBlocksizes = (type, blocksizes) => {
-  switch (type) {
-    case NodeType.File:
-      return blocksizes && blocksizes.length > 0 ? { blocksizes } : undefined
-    default:
-      return undefined
-  }
-}
 
 /**
  *
@@ -646,8 +629,7 @@ const decodeMode = mode => (mode & 0xfff) | (mode & 0xfffff000)
 export const matchFile = ({
   content = EMPTY_BUFFER,
   parts = EMPTY,
-  metadata = BLANK,
-  ...rest
+  metadata = BLANK
 }) => {
   if (parts.length === 0) {
     return new SimpleFileView(content, metadata)
