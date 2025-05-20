@@ -474,7 +474,7 @@ export const decode = bytes => {
       return createShardedDirectory(
         decodeDirectoryLinks(links),
         data || EMPTY_BUFFER,
-       Number( BigInt.asUintN(64, rest.fanout || 0n)),
+        Number( BigInt.asUintN(64, rest.fanout || 0n)),
         Number( BigInt.asUintN(64, rest.hashType || 0n)),
         metadata
       )
