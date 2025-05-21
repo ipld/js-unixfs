@@ -137,10 +137,10 @@ You can optionally pass a unixFsFileLinkWriter stream to capture metadata for ea
 import {
   createWriter,
   createFileWriter,
-} from '@vascosantos/unixfs'
+} from '@ipld/unixfs'
 
-import { withMaxChunkSize } from '@vascosantos/unixfs/file/chunker/fixed'
-import { withWidth } from '@vascosantos/unixfs/file/layout/balanced'
+import { withMaxChunkSize } from '@ipld/unixfs/file/chunker/fixed'
+import { withWidth } from '@ipld/unixfs/file/layout/balanced'
 
 const defaultSettings = UnixFS.configure({
   fileChunkEncoder: raw,
