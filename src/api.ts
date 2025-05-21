@@ -23,7 +23,7 @@ import type {
   Options as DirectoryWriterOptions,
   State as DirectoryWriterState,
 } from "./directory.js"
-import { Metadata } from "./unixfs.js"
+import { Metadata, FileLink } from "./unixfs.js"
 
 export type {
   WriterOptions,
@@ -47,6 +47,7 @@ export type {
   MultihashHasher,
   MultihashDigest,
   Metadata,
+  FileLink,
 }
 
 /**

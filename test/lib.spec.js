@@ -15,13 +15,14 @@ describe("UnixFS.createWriter", () => {
         "bafybeihykld7uyxzogax6vgyvag42y7464eywpf55gxi5qpoisibh3c5wa"
       ),
       dagByteLength: 19,
+      contentByteOffset: 0,
       contentByteLength: 11,
     })
     writer.close()
 
     const blocks = await reader
     assert.deepEqual(
-      blocks.map($ => $.cid.toString()),
+      blocks.map(($) => $.cid.toString()),
       ["bafybeihykld7uyxzogax6vgyvag42y7464eywpf55gxi5qpoisibh3c5wa"]
     )
   })
@@ -39,13 +40,14 @@ describe("UnixFS.createWriter", () => {
       ),
       dagByteLength: 19,
       contentByteLength: 11,
+      contentByteOffset: 0,
     })
 
     writer.close()
 
     const blocks = await reader
     assert.deepEqual(
-      blocks.map($ => $.cid.toString()),
+      blocks.map(($) => $.cid.toString()),
       ["bafybeihykld7uyxzogax6vgyvag42y7464eywpf55gxi5qpoisibh3c5wa"]
     )
   })
@@ -69,7 +71,7 @@ describe("UnixFS.createWriter", () => {
     const blocks = await reader
 
     assert.deepEqual(
-      blocks.map($ => $.cid.toString()),
+      blocks.map(($) => $.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
@@ -96,7 +98,7 @@ describe("UnixFS.createWriter", () => {
     const blocks = await reader
 
     assert.deepEqual(
-      blocks.map($ => $.cid.toString()),
+      blocks.map(($) => $.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
@@ -129,7 +131,7 @@ describe("UnixFS.createWriter", () => {
     const blocks = await reader
 
     assert.deepEqual(
-      blocks.map($ => $.cid.toString()),
+      blocks.map(($) => $.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
@@ -154,6 +156,7 @@ describe("UnixFS.withCapacity", async () => {
     ),
     dagByteLength: 19,
     contentByteLength: 11,
+    contentByteOffset: 0,
   })
 
   assert.equal(fs.writer.desiredSize, 128 - 19)
@@ -168,6 +171,7 @@ describe("UnixFS.withCapacity", async () => {
     ),
     dagByteLength: 11,
     contentByteLength: 3,
+    contentByteOffset: 0,
   })
 
   assert.equal(fs.writer.desiredSize, 128 - 19 - 11)

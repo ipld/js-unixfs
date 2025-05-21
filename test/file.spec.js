@@ -46,6 +46,11 @@ describe("test file", () => {
   })
 
   it("splits into 3 chunks", async function () {
+    const rawFiles = [
+      new Uint8Array(CHUNK_SIZE).fill(1),
+      new Uint8Array(CHUNK_SIZE).fill(2),
+      new Uint8Array(CHUNK_SIZE).fill(3),
+    ]
     const { readable, writable } = new TransformStream(
       {},
       {},
@@ -54,15 +59,37 @@ describe("test file", () => {
       }
     )
     const writer = writable.getWriter()
-    const file = UnixFS.createFileWriter({ writer })
-    file.write(new Uint8Array(CHUNK_SIZE).fill(1))
-    file.write(new Uint8Array(CHUNK_SIZE).fill(2))
-    file.write(new Uint8Array(CHUNK_SIZE).fill(3))
+
+    // Capture links metadata
+    /** @type {import('../src/unixfs.js').FileLink[]} */
+    const fileLinkItems = []
+    const { readable: fileLinkReadable, writable: fileLinkWritable } =
+      new TransformStream()
+    // Start consuming links stream asynchronously
+    void (async () => {
+      const reader = fileLinkReadable.getReader()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        fileLinkItems.push(value)
+      }
+    })()
+
+    const file = UnixFS.createFileWriter({
+      writer,
+      initOptions: {
+        unixFsFileLinkWriter: fileLinkWritable.getWriter(),
+      },
+    })
+    for (const rawFile of rawFiles) {
+      file.write(rawFile)
+    }
     const link = await file.close()
 
+    // Check the root CID
     // TODO: So go-ipfs sets CIDv0 links which casuse a mismatch
     assert.deepEqual(link, {
-      contentByteLength: 786432,
+      contentByteLength: CHUNK_SIZE * 3,
       dagByteLength: 786632,
       /** @type {Link.Link} */
       cid: Link.parse(
@@ -71,16 +98,23 @@ describe("test file", () => {
     })
 
     const blocks = readable.getReader()
+
+    // Check the first block
     const r1 = await blocks.read()
     if (r1.done) {
       assert.fail("expected to get a block")
     }
-
     assert.deepEqual(
       r1.value.cid,
       Link.parse("bafybeihhsdoupgd3fnl3e3367ymsanmikafpllldsdt37jzyoh6nuatowe")
     )
+    const l1 = fileLinkItems.find((l) => l.cid.equals(r1.value.cid))
+    assert.isTrue(l1 !== undefined)
+    assert.equal(l1?.contentByteLength, CHUNK_SIZE)
+    assert.equal(l1?.dagByteLength, CHUNK_SIZE + 14)
+    assert.equal(l1?.contentByteOffset, 0)
 
+    // Check the second block
     const r2 = await blocks.read()
     if (r2.done) {
       assert.fail("expected to get a block")
@@ -89,7 +123,13 @@ describe("test file", () => {
       r2.value.cid,
       Link.parse("bafybeief3dmadxfymhhhrflqytqmlhlz47w6glaxvyzmm6s6tpfb6izzee")
     )
+    const l2 = fileLinkItems.find((l) => l.cid.equals(r2.value.cid))
+    assert.isTrue(l2 !== undefined)
+    assert.equal(l2?.contentByteLength, CHUNK_SIZE)
+    assert.equal(l2?.dagByteLength, CHUNK_SIZE + 14)
+    assert.equal(l2?.contentByteOffset, CHUNK_SIZE)
 
+    // Check the third block
     const r3 = await blocks.read()
     if (r3.done) {
       assert.fail("expected to get a block")
@@ -98,8 +138,19 @@ describe("test file", () => {
       r3.value.cid,
       Link.parse("bafybeihznihf5g5ibdyoawn7uu3inlyqrxjv63lt6lop6h3w6rzwrp67a4")
     )
+    const l3 = fileLinkItems.find((l) => l.cid.equals(r3.value.cid))
+    assert.isTrue(l3 !== undefined)
+    assert.equal(l3?.contentByteLength, CHUNK_SIZE)
+    assert.equal(l3?.dagByteLength, CHUNK_SIZE + 14)
+    assert.equal(l3?.contentByteOffset, CHUNK_SIZE * 2)
 
     await writer.close()
+
+    // Check root
+    assert.isTrue(
+      fileLinkItems.find((l) => l.cid.equals(link.cid)) !== undefined
+    )
+    assert.equal(fileLinkItems.length, 4)
   })
 
   it("--chunker=size-65535 --trickle=false --raw-leaves=false --cid-version=1", async () => {
@@ -130,6 +181,7 @@ describe("test file", () => {
     }
 
     const link = await file.close()
+    console.log("link", link)
     assert.deepEqual(link, {
       /** @type {Link.Link} */
       cid: Link.parse(
@@ -292,6 +344,7 @@ describe("test file", () => {
         "bafybeif7ztnhq65lumvvtr4ekcwd2ifwgm3awq4zfr3srh462rwyinlb4y"
       ),
       contentByteLength: 0,
+      contentByteOffset: 0,
       dagByteLength: 6,
     })
   })
@@ -312,6 +365,7 @@ describe("test file", () => {
         "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
       ),
       contentByteLength: 37,
+      contentByteOffset: 0,
       dagByteLength: 45,
     })
   })
@@ -335,6 +389,7 @@ describe("test file", () => {
         "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
       ),
       contentByteLength: 37,
+      contentByteOffset: 0,
       dagByteLength: 45,
     })
   })

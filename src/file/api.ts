@@ -72,10 +72,17 @@ export interface EncoderSettings<Layout extends unknown = unknown> {
   linker: Linker
 }
 
+export interface InitOptions {
+  unixFsFileLinkWriter?: UnixFsFileLinkWriter
+}
+
+export interface UnixFsFileLinkWriter extends StreamWriter<UnixFS.FileLink> {}
+
 export interface Options<Layout = unknown> {
   writer: BlockWriter
   metadata?: UnixFS.Metadata
   settings?: EncoderSettings<Layout>
+  initOptions?: InitOptions
 }
 
 export interface CloseOptions {

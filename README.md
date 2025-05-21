@@ -129,6 +129,88 @@ const demo = async blob => {
 }
 ```
 
+### Collecting UnixFS FileLinks
+
+You can optionally pass a unixFsFileLinkWriter stream to capture metadata for each link (useful for indexing or tracking layout information).
+
+```js
+import {
+  createWriter,
+  createFileWriter,
+} from '@ipld/unixfs'
+
+import { withMaxChunkSize } from '@ipld/unixfs/file/chunker/fixed'
+import { withWidth } from '@ipld/unixfs/file/layout/balanced'
+
+const defaultSettings = UnixFS.configure({
+  fileChunkEncoder: raw,
+  smallFileEncoder: raw,
+  chunker: withMaxChunkSize(1024 * 1024),
+  fileLayout: withWidth(1024),
+})
+
+/**
+ * @param {Blob} blob
+ * @returns {Promise<import('@vascosantos/unixfs').FileLink[]>}
+ */
+async function collectUnixFsFileLinks(blob) {
+  const fileLinks = []
+
+  // Create a stream to collect metadata (FileLinks)
+  const { readable, writable } = new TransformStream()
+
+  // Set up the main UnixFS writer (data goes nowhere here)
+  const unixfsWriter = createWriter({
+    writable: new WritableStream(), // Discard actual DAG output
+    settings: defaultSettings,
+  })
+
+  // Set up the file writer with link metadata writer
+  const unixFsFileLinkWriter = writable.getWriter()
+
+  const fileWriter = createFileWriter({
+    ...unixfsWriter,
+    initOptions: {
+      unixFsFileLinkWriter,
+    },
+  })
+
+  // Start concurrent reading of the metadata stream
+  const fileLinkReader = readable.getReader()
+  const readLinks = (async () => {
+    while (true) {
+      const { done, value } = await fileLinkReader.read()
+      if (done) break
+      fileLinks.push(value)
+    }
+  })()
+
+  // Pipe the blob to the file writer
+  await blob.stream().pipeTo(
+    new WritableStream({
+      async write(chunk) {
+        await fileWriter.write(chunk)
+      },
+    })
+  )
+
+  // Finalize everything
+  await fileWriter.close()
+  await unixfsWriter.close()
+  await unixFsFileLinkWriter.close()
+
+  // Wait for all links to be read
+  await readLinks
+
+  return fileLinks
+}
+
+// Usage
+const blob = new Blob(['Hello UnixFS links'])
+const links = await collectUnixFsFileLinks(blob)
+console.log(links)
+```
+
 ## License
 
 Licensed under either of

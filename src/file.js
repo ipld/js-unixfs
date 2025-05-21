@@ -28,7 +28,7 @@ export const defaults = () => ({
  * @param {Partial<API.EncoderSettings<Layout>>} config
  * @returns {API.EncoderSettings<Layout>}
  */
-export const configure = config => ({
+export const configure = (config) => ({
   ...defaults(),
   ...config,
 })
@@ -50,8 +50,15 @@ export const UnixFSRawLeaf = {
  * @param {API.Options<Layout>} options
  * @returns {API.View<Layout>}
  */
-export const create = ({ writer, metadata = {}, settings = defaults() }) =>
-  new FileWriterView(Writer.init(writer, metadata, configure(settings)))
+export const create = ({
+  writer,
+  metadata = {},
+  settings = defaults(),
+  initOptions = {},
+}) =>
+  new FileWriterView(
+    Writer.init(writer, metadata, configure(settings), initOptions)
+  )
 
 /**
  * @template T
@@ -98,7 +105,7 @@ export const close = async (
  */
 const perform = (view, effect) =>
   Task.fork(
-    Task.loop(effect, message => {
+    Task.loop(effect, (message) => {
       const { state, effect } = Writer.update(message, view.state)
       view.state = state
       return effect

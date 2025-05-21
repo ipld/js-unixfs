@@ -21,7 +21,7 @@ describe("test directory", () => {
     const output = await collect(readable)
 
     assert.deepEqual(
-      output.map($ => $.cid),
+      output.map(($) => $.cid),
       [
         Link.parse(
           "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354"
@@ -47,6 +47,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 45,
       contentByteLength: 37,
+      contentByteOffset: 0,
     })
 
     root.set("file.txt", fileLink)
@@ -65,7 +66,7 @@ describe("test directory", () => {
     const output = await blocks
 
     assert.deepEqual(
-      output.map($ => $.cid),
+      output.map(($) => $.cid),
       [
         Link.parse(
           "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
@@ -142,6 +143,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -152,6 +154,7 @@ describe("test directory", () => {
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta"
       ),
       dagByteLength: 11,
+      contentByteOffset: 0,
       contentByteLength: 3,
     })
 
@@ -173,7 +176,7 @@ describe("test directory", () => {
     writer.close()
     const items = await blocks
     assert.deepEqual(
-      items.map(item => item.cid.toString()),
+      items.map((item) => item.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
@@ -196,6 +199,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -207,6 +211,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 11,
       contentByteLength: 3,
+      contentByteOffset: 0,
     })
 
     root.set("hello", hello)
@@ -223,7 +228,7 @@ describe("test directory", () => {
     writer.close()
     const items = await blocks
     assert.deepEqual(
-      items.map(item => item.cid.toString()),
+      items.map((item) => item.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
@@ -246,6 +251,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -263,7 +269,7 @@ describe("test directory", () => {
     writer.close()
     const blocks = await reader
     assert.deepEqual(
-      blocks.map(block => block.cid.toString()),
+      blocks.map((block) => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeiczsscdsbs7ffqz55asqdf3smv6klcw3gofszvwlyarci47bgf354",
@@ -300,6 +306,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -311,6 +318,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 11,
       contentByteLength: 3,
+      contentByteOffset: 0,
     })
 
     root.set("hello", hello)
@@ -330,7 +338,7 @@ describe("test directory", () => {
     writer.close()
     const blocks = await reader
     assert.deepEqual(
-      blocks.map(block => block.cid.toString()),
+      blocks.map((block) => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
@@ -353,6 +361,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -364,6 +373,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 11,
       contentByteLength: 3,
+      contentByteOffset: 0,
     })
 
     root.set("hello", hello)
@@ -388,7 +398,7 @@ describe("test directory", () => {
     writer.close()
     const blocks = await reader
     assert.deepEqual(
-      blocks.map(block => block.cid.toString()),
+      blocks.map((block) => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
@@ -417,7 +427,7 @@ describe("test directory", () => {
 
     const blocks = await reader
     assert.deepEqual(
-      blocks.map(block => block.cid.toString()),
+      blocks.map((block) => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeieuo4clbaujw35wxt7s4jlorbgztvufvdrcxxb6hik5mzfqku2tbq",
@@ -439,6 +449,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -450,6 +461,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 11,
       contentByteLength: 3,
+      contentByteOffset: 0,
     })
 
     root.set("hello", hello)
@@ -478,7 +490,7 @@ describe("test directory", () => {
     writer.close()
     const blocks = await reader
     assert.deepEqual(
-      blocks.map(block => block.cid.toString()),
+      blocks.map((block) => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
@@ -489,7 +501,7 @@ describe("test directory", () => {
     patchWriter.close()
     const delta = await patchReader
     assert.deepEqual(
-      delta.map(block => block.cid.toString()),
+      delta.map((block) => block.cid.toString()),
       ["bafybeibpefc2sgzngxttfwrawvaiewk4hj5yxdp5kik52jpds5ujg3ij44"]
     )
   })

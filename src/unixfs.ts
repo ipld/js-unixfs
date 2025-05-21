@@ -6,10 +6,15 @@ import type {
   Link as IPLDLink,
   Version as LinkVersion,
   Block as IPLDBlock,
-  BlockView as IPLDBlockView
+  BlockView as IPLDBlockView,
 } from "multiformats"
 import { Data, type IData } from "../gen/unixfs.js"
-export type { MultihashHasher, MultibaseEncoder, MultihashDigest, BlockEncoder }
+export type {
+  MultihashHasher,
+  MultibaseEncoder,
+  MultihashDigest,
+  BlockEncoder,
+}
 export * as Layout from "./file/layout/api"
 
 import NodeType = Data.DataType
@@ -161,6 +166,11 @@ export interface ContentDAGLink<T> extends DAGLink<T> {
    * Total number of bytes in the file
    */
   readonly contentByteLength: number
+
+  /**
+   * Offset bytes in the file
+   */
+  readonly contentByteOffset?: number
 }
 
 /**

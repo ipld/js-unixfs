@@ -21,7 +21,7 @@ describe("test directory", () => {
     const output = await collect(readable)
 
     assert.deepEqual(
-      output.map($ => $.cid),
+      output.map(($) => $.cid),
       [
         Link.parse(
           "bafybeifoplefg5piy3pjhlp73q7unqx4hwecxeu7opfqfmg352pkpljt6m"
@@ -47,6 +47,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 45,
       contentByteLength: 37,
+      contentByteOffset: 0,
     })
 
     root.set("file.txt", fileLink)
@@ -65,7 +66,7 @@ describe("test directory", () => {
     const output = await blocks
 
     assert.deepEqual(
-      output.map($ => $.cid),
+      output.map(($) => $.cid),
       [
         Link.parse(
           "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
@@ -94,6 +95,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 45,
       contentByteLength: 37,
+      contentByteOffset: 0,
     })
 
     for (let i = 0; i < 100; i++) {
@@ -115,28 +117,68 @@ describe("test directory", () => {
     const output = await blocks
 
     assert.deepEqual(
-      output.map($ => $.cid),
+      output.map(($) => $.cid),
       [
-        Link.parse("bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"),
-        Link.parse("bafybeic66itcox6c3pozwsktz552f3pd3eanqr74jpvjezchwrkpqemjru"),
-        Link.parse("bafybeigyad752jkaj6qrlgtvovw5dzvhcj7pfvo5pjxkdlzec3kn3qqcoy"),
-        Link.parse("bafybeiflrsirdjonnavtsdg7vb63z7mcnzuymuv6eiwxw2wxqkezhludjm"),
-        Link.parse("bafybeigw2ilsvwhg3uglrmryyuk7dtu4yudr5naerrzb5e7ibmk7rscu3y"),
-        Link.parse("bafybeicprkb6dv56v3ezgj4yffbsueamhkkodfsxvwyaty3okfu6tgq3rm"),
-        Link.parse("bafybeienx5re7fb3s2crypbkkyp5l5zo5xb5bqfxh67ieq2aivgtaw5bqq"),
-        Link.parse("bafybeiewng4vb4elq23cjybjhehg2z3lshskzstxzgrhllyb7jsz2dckdq"),
-        Link.parse("bafybeifz4lbafvzkj7njb3cdr7r3ngl5643jhtghl2ntbvoyx5hocvepvy"),
-        Link.parse("bafybeibperpo4gxoi7x3g7entslorxizzy3imr44hujjqrus4hfs4ekqge"),
-        Link.parse("bafybeiamtplq4n5kdlhorxmougus3y54r52frrvotkduzy7kfgyrepvylu"),
-        Link.parse("bafybeieqvwd6ditluxwzrbvq3ffusuykxbljlqyf7gbf7esi6ake4xh27a"),
-        Link.parse("bafybeigkk3fanqwihj5qautj4yzluxnh3okblouotd2qkreijejdic2fui"),
-        Link.parse("bafybeiafn56xmx6hqgs4ig4yc24cdnbzyghjml6yhg3hmmemkrwl4irluu"),
-        Link.parse("bafybeieu5uzq5jbtuhnaazl36pjygv57virwr3tbdgqujhpya5w7dfosz4"),
-        Link.parse("bafybeid57gn3655jtgnnocwnjznifyltepqoiu3chbawyy2f263hm3qylm"),
-        Link.parse("bafybeig3iwqy4v44nvgyabirtbel6sbk6pzfuwdpzj4z26vczda2nycyrq"),
-        Link.parse("bafybeigrpoorhusehwpw2caoe7mw65xaundu227vcxqv6mqfeo65tcwxqm"),
-        Link.parse("bafybeif3iq6dnq2qixkoqnmyvijplu6x5depgmfgpfncpxkcx5ytajrxxy"),
-        Link.parse("bafybeidzpkzefoys5ani6qfvrpxyjiolmy6ng445uceov2a33r5bw43qwe"),
+        Link.parse(
+          "bafybeidequ5soq6smzafv4lb76i5dkvl5fzgvrxz4bmlc2k4dkikklv2j4"
+        ),
+        Link.parse(
+          "bafybeic66itcox6c3pozwsktz552f3pd3eanqr74jpvjezchwrkpqemjru"
+        ),
+        Link.parse(
+          "bafybeigyad752jkaj6qrlgtvovw5dzvhcj7pfvo5pjxkdlzec3kn3qqcoy"
+        ),
+        Link.parse(
+          "bafybeiflrsirdjonnavtsdg7vb63z7mcnzuymuv6eiwxw2wxqkezhludjm"
+        ),
+        Link.parse(
+          "bafybeigw2ilsvwhg3uglrmryyuk7dtu4yudr5naerrzb5e7ibmk7rscu3y"
+        ),
+        Link.parse(
+          "bafybeicprkb6dv56v3ezgj4yffbsueamhkkodfsxvwyaty3okfu6tgq3rm"
+        ),
+        Link.parse(
+          "bafybeienx5re7fb3s2crypbkkyp5l5zo5xb5bqfxh67ieq2aivgtaw5bqq"
+        ),
+        Link.parse(
+          "bafybeiewng4vb4elq23cjybjhehg2z3lshskzstxzgrhllyb7jsz2dckdq"
+        ),
+        Link.parse(
+          "bafybeifz4lbafvzkj7njb3cdr7r3ngl5643jhtghl2ntbvoyx5hocvepvy"
+        ),
+        Link.parse(
+          "bafybeibperpo4gxoi7x3g7entslorxizzy3imr44hujjqrus4hfs4ekqge"
+        ),
+        Link.parse(
+          "bafybeiamtplq4n5kdlhorxmougus3y54r52frrvotkduzy7kfgyrepvylu"
+        ),
+        Link.parse(
+          "bafybeieqvwd6ditluxwzrbvq3ffusuykxbljlqyf7gbf7esi6ake4xh27a"
+        ),
+        Link.parse(
+          "bafybeigkk3fanqwihj5qautj4yzluxnh3okblouotd2qkreijejdic2fui"
+        ),
+        Link.parse(
+          "bafybeiafn56xmx6hqgs4ig4yc24cdnbzyghjml6yhg3hmmemkrwl4irluu"
+        ),
+        Link.parse(
+          "bafybeieu5uzq5jbtuhnaazl36pjygv57virwr3tbdgqujhpya5w7dfosz4"
+        ),
+        Link.parse(
+          "bafybeid57gn3655jtgnnocwnjznifyltepqoiu3chbawyy2f263hm3qylm"
+        ),
+        Link.parse(
+          "bafybeig3iwqy4v44nvgyabirtbel6sbk6pzfuwdpzj4z26vczda2nycyrq"
+        ),
+        Link.parse(
+          "bafybeigrpoorhusehwpw2caoe7mw65xaundu227vcxqv6mqfeo65tcwxqm"
+        ),
+        Link.parse(
+          "bafybeif3iq6dnq2qixkoqnmyvijplu6x5depgmfgpfncpxkcx5ytajrxxy"
+        ),
+        Link.parse(
+          "bafybeidzpkzefoys5ani6qfvrpxyjiolmy6ng445uceov2a33r5bw43qwe"
+        ),
       ]
     )
   })
@@ -206,6 +248,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -217,6 +260,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 11,
       contentByteLength: 3,
+      contentByteOffset: 0,
     })
 
     root.set("hello", hello)
@@ -237,7 +281,7 @@ describe("test directory", () => {
     writer.close()
     const items = await blocks
     assert.deepEqual(
-      items.map(item => item.cid.toString()),
+      items.map((item) => item.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
@@ -260,6 +304,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -271,6 +316,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 11,
       contentByteLength: 3,
+      contentByteOffset: 0,
     })
 
     root.set("hello", hello)
@@ -287,7 +333,7 @@ describe("test directory", () => {
     writer.close()
     const items = await blocks
     assert.deepEqual(
-      items.map(item => item.cid.toString()),
+      items.map((item) => item.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
@@ -310,6 +356,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -327,7 +374,7 @@ describe("test directory", () => {
     writer.close()
     const blocks = await reader
     assert.deepEqual(
-      blocks.map(block => block.cid.toString()),
+      blocks.map((block) => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeifoplefg5piy3pjhlp73q7unqx4hwecxeu7opfqfmg352pkpljt6m",
@@ -364,6 +411,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -375,6 +423,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 11,
       contentByteLength: 3,
+      contentByteOffset: 0,
     })
 
     root.set("hello", hello)
@@ -394,7 +443,7 @@ describe("test directory", () => {
     writer.close()
     const blocks = await reader
     assert.deepEqual(
-      blocks.map(block => block.cid.toString()),
+      blocks.map((block) => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
@@ -406,7 +455,10 @@ describe("test directory", () => {
       await root.close()
       assert.fail()
     } catch (/** @type {any} */ err) {
-      assert.equal(err.message, "Can not change written HAMT directory, but you can .fork() and make changes to it")
+      assert.equal(
+        err.message,
+        "Can not change written HAMT directory, but you can .fork() and make changes to it"
+      )
     }
   })
 
@@ -424,6 +476,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -435,6 +488,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 11,
       contentByteLength: 3,
+      contentByteOffset: 0,
     })
 
     root.set("hello", hello)
@@ -459,7 +513,7 @@ describe("test directory", () => {
     writer.close()
     const blocks = await reader
     assert.deepEqual(
-      blocks.map(block => block.cid.toString()),
+      blocks.map((block) => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
@@ -488,7 +542,7 @@ describe("test directory", () => {
 
     const blocks = await reader
     assert.deepEqual(
-      blocks.map(block => block.cid.toString()),
+      blocks.map((block) => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeihccqhztoqxfi5mmnv55iofsz7slpzq4gnktf3vzycavqbms5eote",
@@ -510,6 +564,7 @@ describe("test directory", () => {
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq"
       ),
       contentByteLength: 5,
+      contentByteOffset: 0,
       dagByteLength: 13,
     })
 
@@ -521,6 +576,7 @@ describe("test directory", () => {
       ),
       dagByteLength: 11,
       contentByteLength: 3,
+      contentByteOffset: 0,
     })
 
     root.set("hello", hello)
@@ -549,7 +605,7 @@ describe("test directory", () => {
     writer.close()
     const blocks = await reader
     assert.deepEqual(
-      blocks.map(block => block.cid.toString()),
+      blocks.map((block) => block.cid.toString()),
       [
         "bafybeid3weurg3gvyoi7nisadzolomlvoxoppe2sesktnpvdve3256n5tq",
         "bafybeigl43jff4muiw2m6kzqhm7xpz6ti7etiujklpnc6vpblzjvvwqmta",
@@ -560,7 +616,7 @@ describe("test directory", () => {
     patchWriter.close()
     const delta = await patchReader
     assert.deepEqual(
-      delta.map(block => block.cid.toString()),
+      delta.map((block) => block.cid.toString()),
       ["bafybeihxagpxz7lekn7exw6ob526d6pgvnzc3kgtpkbh7ze73e2oc7oxpa"]
     )
   })
@@ -714,7 +770,7 @@ describe("test directory", () => {
     }
     root.set("file.txt", fileLink)
     assert.equal(root.size, 1)
-    root.state.entries.forEach(entry => assert.deepEqual(entry, fileLink))
+    root.state.entries.forEach((entry) => assert.deepEqual(entry, fileLink))
   })
 
   it("writer state .get", async function () {

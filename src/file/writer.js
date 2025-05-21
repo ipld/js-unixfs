@@ -13,6 +13,7 @@ import * as Queue from "./layout/queue.js"
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
+ * readonly unixFsFileLinkWriter?: API.UnixFsFileLinkWriter
  * chunker: Chunker.Chunker
  * layout: Layout
  * nodeQueue: Queue.Queue
@@ -25,6 +26,7 @@ import * as Queue from "./layout/queue.js"
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
+ * readonly unixFsFileLinkWriter?: API.UnixFsFileLinkWriter
  * readonly rootID: Layout.NodeID
  * readonly end?: Task.Fork<void, never>
  * chunker?: null
@@ -39,6 +41,7 @@ import * as Queue from "./layout/queue.js"
  * readonly metadata: UnixFS.Metadata
  * readonly config: API.EncoderSettings<Layout>
  * readonly writer: API.BlockWriter
+ * readonly unixFsFileLinkWriter?: API.UnixFsFileLinkWriter
  * readonly link: Layout.Link
  * chunker?: null
  * layout?: null
@@ -63,6 +66,7 @@ import * as Queue from "./layout/queue.js"
  * |{type:"write", bytes:Uint8Array}
  * |{type:"link", link:API.EncodedFile}
  * |{type:"block"}
+ * |{type:"fileLink"}
  * |{type: "close"}
  * |{type: "end"}
  * } Message
@@ -82,6 +86,9 @@ export const update = (message, state) => {
     /* c8 ignore next 2 */
     case "block":
       return { state, effect: Task.none() }
+    /* c8 ignore next 2 */
+    case "fileLink":
+      return { state, effect: Task.none() }
     case "close":
       return close(state)
     case "end":
@@ -96,9 +103,10 @@ export const update = (message, state) => {
  * @param {API.BlockWriter} writer
  * @param {UnixFS.Metadata} metadata
  * @param {API.EncoderSettings} config
+ * @param {API.InitOptions} [options]
  * @returns {State<Layout>}
  */
-export const init = (writer, metadata, config) => {
+export const init = (writer, metadata, config, options = {}) => {
   return {
     status: "open",
     metadata,
@@ -116,6 +124,7 @@ export const init = (writer, metadata, config) => {
     // overhead.
     // @see https://github.com/Gozala/vectrie
     nodeQueue: Queue.mutable(),
+    unixFsFileLinkWriter: options.unixFsFileLinkWriter,
   }
 }
 /**
@@ -188,11 +197,23 @@ export const link = (state, { id, link, block }) => {
       ? state.end.resume()
       : Task.none()
 
+  if (!state.unixFsFileLinkWriter) {
+    return {
+      state: newState,
+      effect: Task.listen({
+        link: Task.effects(tasks),
+        block: writeBlock(state.writer, block),
+        end,
+      }),
+    }
+  }
+
   return {
     state: newState,
     effect: Task.listen({
       link: Task.effects(tasks),
       block: writeBlock(state.writer, block),
+      fileLink: writeFileLink(state.unixFsFileLinkWriter, link),
       end,
     }),
   }
@@ -203,7 +224,7 @@ export const link = (state, { id, link, block }) => {
  * @param {State<Layout>} state
  * @returns {Update<Layout>}
  */
-export const close = state => {
+export const close = (state) => {
   if (state.status === "open") {
     const { chunks } = Chunker.close(state.chunker)
     const { layout, ...write } = state.config.fileLayout.write(
@@ -269,7 +290,7 @@ export const close = state => {
  * @param {API.EncoderSettings} config
  */
 const encodeLeaves = (leaves, config) =>
-  leaves.map(leaf => encodeLeaf(config, leaf, config.fileChunkEncoder))
+  leaves.map((leaf) => encodeLeaf(config, leaf, config.fileChunkEncoder))
 
 /**
  * @param {API.EncoderSettings} config
@@ -286,6 +307,7 @@ const encodeLeaf = function* ({ hasher, linker }, { id, content }, encoder) {
   const link = /** @type {UnixFS.FileLink} */ ({
     cid,
     contentByteLength: content ? content.byteLength : 0,
+    contentByteOffset: content ? content.byteOffset : 0,
     dagByteLength: bytes.byteLength,
   })
 
@@ -297,7 +319,7 @@ const encodeLeaf = function* ({ hasher, linker }, { id, content }, encoder) {
  * @param {API.EncoderSettings} config
  */
 const encodeBranches = (nodes, config) =>
-  nodes.map(node => encodeBranch(config, node))
+  nodes.map((node) => encodeBranch(config, node))
 
 /**
  * @template Layout
@@ -339,12 +361,29 @@ export const writeBlock = function* (writer, block) {
 }
 
 /**
+ * @param {API.UnixFsFileLinkWriter} writer
+ * @param {Layout.Link} link
+ * @returns {Task.Task<void, never>}
+ */
+
+export const writeFileLink = function* (writer, link) {
+  /* c8 ignore next 3 */
+  if (!writer) {
+    return
+  }
+  if ((writer.desiredSize || 0) <= 0) {
+    yield* Task.wait(writer.ready)
+  }
+  writer.write(link)
+}
+
+/**
  *
  * @param {Uint8Array|Chunker.Chunk} buffer
  * @returns
  */
 
-const asUint8Array = buffer =>
+const asUint8Array = (buffer) =>
   buffer instanceof Uint8Array
     ? buffer
     : buffer.copyTo(new Uint8Array(buffer.byteLength), 0)
@@ -353,4 +392,4 @@ const asUint8Array = buffer =>
  * @param {Layout.Node} node
  * @returns {node is Layout.Leaf}
  */
-const isLeafNode = node => node.children == null
+const isLeafNode = (node) => node.children == null
