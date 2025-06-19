@@ -53,7 +53,7 @@ export namespace Data {
           w.fork()
         }
 
-        if (obj.Type != null) {
+        if (obj.Type != null && __DataTypeValues[obj.Type] !== 0) {
           w.uint32(8)
           Data.DataType.codec().encode(obj.Type, w)
         }
@@ -177,8 +177,8 @@ export namespace Data {
 }
 
 export interface UnixTime {
-  Seconds: bigint
-  FractionalNanoseconds: number
+  seconds: bigint
+  fractionalNanoseconds: number
 }
 
 export namespace UnixTime {
@@ -191,14 +191,14 @@ export namespace UnixTime {
           w.fork()
         }
 
-        if (obj.Seconds != null) {
+        if ((obj.seconds != null && obj.seconds !== 0n)) {
           w.uint32(8)
-          w.int64(obj.Seconds)
+          w.int64(obj.seconds)
         }
 
-        if ((obj.FractionalNanoseconds != null && obj.FractionalNanoseconds !== 0)) {
+        if ((obj.fractionalNanoseconds != null && obj.fractionalNanoseconds !== 0)) {
           w.uint32(21)
-          w.fixed32(obj.FractionalNanoseconds)
+          w.fixed32(obj.fractionalNanoseconds)
         }
 
         if (opts.lengthDelimited !== false) {
@@ -206,8 +206,8 @@ export namespace UnixTime {
         }
       }, (reader, length, opts = {}) => {
         const obj: any = {
-          Seconds: 0n,
-          FractionalNanoseconds: 0
+          seconds: 0n,
+          fractionalNanoseconds: 0
         }
 
         const end = length == null ? reader.len : reader.pos + length
@@ -217,11 +217,11 @@ export namespace UnixTime {
 
           switch (tag >>> 3) {
             case 1: {
-              obj.Seconds = reader.int64()
+              obj.seconds = reader.int64()
               break
             }
             case 2: {
-              obj.FractionalNanoseconds = reader.fixed32()
+              obj.fractionalNanoseconds = reader.fixed32()
               break
             }
             default: {
@@ -248,7 +248,7 @@ export namespace UnixTime {
 }
 
 export interface Metadata {
-  MimeType: string
+  mimeType: string
 }
 
 export namespace Metadata {
@@ -261,9 +261,9 @@ export namespace Metadata {
           w.fork()
         }
 
-        if ((obj.MimeType != null && obj.MimeType !== '')) {
+        if ((obj.mimeType != null && obj.mimeType !== '')) {
           w.uint32(10)
-          w.string(obj.MimeType)
+          w.string(obj.mimeType)
         }
 
         if (opts.lengthDelimited !== false) {
@@ -271,7 +271,7 @@ export namespace Metadata {
         }
       }, (reader, length, opts = {}) => {
         const obj: any = {
-          MimeType: ''
+          mimeType: ''
         }
 
         const end = length == null ? reader.len : reader.pos + length
@@ -281,7 +281,7 @@ export namespace Metadata {
 
           switch (tag >>> 3) {
             case 1: {
-              obj.MimeType = reader.string()
+              obj.mimeType = reader.string()
               break
             }
             default: {

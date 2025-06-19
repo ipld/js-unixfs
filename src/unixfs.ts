@@ -307,14 +307,14 @@ export interface UnixTime {
    * (signed 64bit integer): represents the amount of seconds after or before
    * the epoch.
    */
-  readonly Seconds: bigint
+  readonly seconds: bigint
 
   /**
    * (optional, 32bit unsigned integer ): when specified represents the
    * fractional part of the mtime as the amount of nanoseconds. The valid
    * range for this value are the integers [1, 999999999].
    */
-  readonly FractionalNanoseconds?: number
+  readonly fractionalNanoseconds?: number
 }
 
 /**
