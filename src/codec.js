@@ -168,7 +168,7 @@ export const encodeRaw = content =>
   encodePB(
     {
       Type: NodeType.Raw,
-      Data: content.byteLength > 0 ? content : EMPTY_BUFFER,
+      Data: content,
       filesize: content.length === 0 ? Object.assign(0n, { __forceEncode: true }) : BigInt(content.length),
       // @ts-ignore
       blocksizes: EMPTY,
@@ -268,7 +268,7 @@ export const encodeSimpleFile = (content, metadata = BLANK) =>
       // adding empty file to both go-ipfs and js-ipfs produces block in
       // which `Data` is omitted but filesize and blocksizes are present.
       // For the sake of hash consistency we do the same.
-      Data: content.byteLength > 0 ? content : EMPTY_BUFFER,
+      Data: content,
       filesize: content.length === 0 ? Object.assign(0n, { __forceEncode: true }) : BigInt(content.length),
       blocksizes: [],
       ...encodeMetadata(metadata),
