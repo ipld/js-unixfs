@@ -167,7 +167,6 @@ export const createDirectoryShard = (entries, bitfield, fanout, hashType) => ({
 export const encodeRaw = content =>
   encodePB(
     {
-      
       Type: NodeType.Raw,
       Data: content.byteLength > 0 ? content : EMPTY_BUFFER,
       filesize: content.length === 0 ? Object.assign(0n, { __forceEncode: true }) : BigInt(content.length),

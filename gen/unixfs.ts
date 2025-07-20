@@ -9,7 +9,7 @@ import { alloc as uint8ArrayAlloc } from 'uint8arrays/alloc'
 import type { Uint8ArrayList } from 'uint8arraylist'
 
 export interface Data {
-  Type: Data.DataType
+  Type?: Data.DataType
   Data: Uint8Array
   filesize: bigint
   blocksizes: bigint[]
@@ -53,7 +53,7 @@ export namespace Data {
           w.fork()
         }
 
-        if (obj.Type != null && __DataTypeValues[obj.Type] !== 0) {
+        if (obj.Type != null) {
           w.uint32(8)
           Data.DataType.codec().encode(obj.Type, w)
         }
@@ -100,7 +100,6 @@ export namespace Data {
         }
       }, (reader, length, opts = {}) => {
         const obj: any = {
-          Type: DataType.Raw,
           Data: uint8ArrayAlloc(0),
           filesize: 0n,
           blocksizes: [],

@@ -37,7 +37,7 @@ export var Data;
                 if (opts.lengthDelimited !== false) {
                     w.fork();
                 }
-                if (obj.Type != null && __DataTypeValues[obj.Type] !== 0) {
+                if (obj.Type != null) {
                     w.uint32(8);
                     Data.DataType.codec().encode(obj.Type, w);
                 }
@@ -76,7 +76,6 @@ export var Data;
                 }
             }, (reader, length, opts = {}) => {
                 const obj = {
-                    Type: DataType.Raw,
                     Data: uint8ArrayAlloc(0),
                     filesize: 0n,
                     blocksizes: [],

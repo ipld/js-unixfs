@@ -10,7 +10,7 @@ message Data {
     HAMTShard = 5;
   }
 
-  DataType Type = 1;
+  optional DataType Type = 1;
   bytes Data = 2;
   uint64 filesize = 3;
   repeated uint64 blocksizes = 4;
