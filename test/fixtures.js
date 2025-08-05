@@ -23,3 +23,9 @@ export const Qma5kEnM5fEKTXrFC5zXYRy5QG3hcMWopoFS7ijhxx19qc = new Uint8Array([
 export const QmPZ1CTc5fYErTH2XXDGrfsPsHicYXtkZeVojGycwAfm3v = new Uint8Array([
   10, 6, 8, 4, 18, 2, 104, 105,
 ])
+
+export const complexFile = new Uint8Array([
+   10,  19,   8,   2, 18, 13,  72,
+  101, 108, 108, 111, 32, 85, 110,
+  105, 120,  70,  83, 10, 24,  13
+])

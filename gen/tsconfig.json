@@ -1,0 +1,14 @@
+{
+    "include": ["./unixfs.ts"],
+    "exclude": ["node_modules"],
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "ES2020",
+        "skipLibCheck": true,
+        "declaration": false,
+        "sourceMap": false,
+        "noEmit": false,
+        "outDir": ".",
+        "moduleResolution": "node",
+    }
+}

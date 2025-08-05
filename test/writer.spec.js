@@ -1,3 +1,4 @@
+import { describe, it } from "mocha"
 import * as Writer from "../src/file/writer.js"
 import * as UnixFS from "../src/lib.js"
 import { assert } from "chai"
@@ -8,7 +9,7 @@ describe("Writer", () => {
     const state = Writer.init(
       channel.writable.getWriter(),
       {},
-      UnixFS.defaults()
+      UnixFS.defaults(),
     )
 
     assert.throws(
@@ -16,9 +17,9 @@ describe("Writer", () => {
         Writer.update(
           // @ts-expect-error
           { type: "boom" },
-          state
+          state,
         ),
-      /File Writer got unknown/
+      /File Writer got unknown/,
     )
   })
 
@@ -27,12 +28,12 @@ describe("Writer", () => {
     const open = Writer.init(
       channel.writable.getWriter(),
       {},
-      UnixFS.defaults()
+      UnixFS.defaults(),
     )
     const close = Writer.close(open)
     assert.throws(
       () => Writer.write(close.state, new Uint8Array()),
-      /Unable to perform write on closed file/
+      /Unable to perform write on closed file/,
     )
   })
 
@@ -41,10 +42,23 @@ describe("Writer", () => {
     const open = Writer.init(
       channel.writable.getWriter(),
       {},
-      UnixFS.defaults()
+      UnixFS.defaults(),
     )
     const closed = Writer.close(open)
 
     assert.deepEqual(Writer.close(closed.state).state, closed.state)
+  })
+
+  it("handles end message", () => {
+    const channel = new TransformStream()
+    const state = Writer.init(
+      channel.writable.getWriter(),
+      {},
+      UnixFS.defaults(),
+    )
+
+    const result = Writer.update({ type: "end" }, state)
+
+    assert.strictEqual(result.state, state)
   })
 })

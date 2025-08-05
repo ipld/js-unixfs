@@ -1,57 +1,54 @@
 import type {
-  WriterOptions,
-  EncoderSettings,
-  WritableBlockStream,
+  Block,
   BlockWriter,
-  View as FileWriterView,
-  Writer as FileWriter,
+  Chunker,
+  CloseOptions,
+  EncodedFile,
+  EncoderSettings,
+  LayoutEngine,
+  MultihashDigest,
+  MultihashHasher,
   Options as FileWriterOptions,
   State as FileWriterSate,
-  CloseOptions,
-  Chunker,
-  LayoutEngine,
-  Block,
-  MultihashHasher,
-  MultihashDigest,
-  EncodedFile,
+  View as FileWriterView,
+  WritableBlockStream,
+  Writer as FileWriter,
+  WriterOptions,
 } from "./file.js"
 
 import type {
   DirectoryEntry,
-  Writer as DirectoryWriter,
-  View as DirectoryWriterView,
   Options as DirectoryWriterOptions,
   State as DirectoryWriterState,
+  View as DirectoryWriterView,
+  Writer as DirectoryWriter,
 } from "./directory.js"
 import { Metadata } from "./unixfs.js"
 
 export type {
-  WriterOptions,
-  CloseOptions,
-  EncoderSettings,
-  FileWriterOptions,
-  FileWriterView,
-  FileWriter,
-  FileWriterSate,
-  EncodedFile,
+  Block,
   BlockWriter,
-  WritableBlockStream,
-  DirectoryWriterView,
+  Chunker,
+  CloseOptions,
+  DirectoryEntry,
   DirectoryWriter,
   DirectoryWriterOptions,
   DirectoryWriterState,
-  DirectoryEntry,
-  Chunker,
+  DirectoryWriterView,
+  EncodedFile,
+  EncoderSettings,
+  FileWriter,
+  FileWriterOptions,
+  FileWriterSate,
+  FileWriterView,
   LayoutEngine,
-  Block,
-  MultihashHasher,
-  MultihashDigest,
   Metadata,
+  MultihashDigest,
+  MultihashHasher,
+  WritableBlockStream,
+  WriterOptions,
 }
 
-/**
- *
- */
 export interface Writer {
   /**
    * Closes this writer and corresponding
@@ -90,7 +87,6 @@ export interface View<L extends unknown = unknown> extends Writer {
    * Creates new directory writer that will write blocks into the same
    * underlying stream as this writer. It is mostly convinienc function for
    * passing same stream and encoder configuration.
-   *
    */
   createDirectoryWriter<Layout>(
     settings?: WriterOptions<Layout>

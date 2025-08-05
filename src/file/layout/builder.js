@@ -1,4 +1,3 @@
-import { build } from "protobufjs"
 import * as Chunker from "../chunker/api.js"
 
 /**

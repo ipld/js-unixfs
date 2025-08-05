@@ -8,6 +8,7 @@ import * as Balanced from "../src/file/layout/balanced.js"
 import * as FixedSize from "../src/file/chunker/fixed.js"
 import * as Rabin from "../src/file/chunker/rabin.js"
 import { sha256 } from "multiformats/hashes/sha2"
+import { describe, it } from 'mocha'
 
 const CHUNK_SIZE = 262144
 describe("test file", () => {
@@ -203,7 +204,7 @@ describe("test file", () => {
       contentByteLength: 524288,
       dagByteLength: 548251,
     })
-  })
+  },)
 
   it("trickle layout with overflow", async function () {
     this.timeout(30000)

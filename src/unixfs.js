@@ -8,3 +8,4 @@
 
 import { Data } from "../gen/unixfs.js"
 export const NodeType = Data.DataType
+export { Data }

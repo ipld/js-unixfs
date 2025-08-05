@@ -16,13 +16,11 @@
   },
   "homepage": "https://github.com/ipld/js-unixfs",
   "scripts": {
-    "prepare:proto": "pbjs -t static-module -w es6 -r unixfs --force-number --no-verify --no-delimited --no-create --no-beautify --no-defaults --lint eslint-disable -o gen/unixfs.js ./unixfs.proto",
-    "prepare:proto-types": "pbts -o gen/unixfs.ts gen/unixfs.js",
-    "gen": "node ./scripts/gen.js",
+    "prepare:proto": "protons ./unixfs.proto -o gen && cd gen && tsc",
     "gen:matrix": "node ./scripts/matrix.js",
     "gen:types": "tsc --build",
     "prepare": "tsc --build",
-    "test:web": "playwright-test test/**/*.spec.js --cov && nyc report",
+    "test:web": "playwright-test test/**/*.spec.js -r mocha --cov && nyc report",
     "test:node": "c8 --check-coverage --branches 95 --functions 83 --lines 94 mocha test/**/*.spec.js",
     "test": "npm run test:node",
     "coverage": "c8 --reporter=html mocha test/**/*.spec.js && npm_config_yes=true npx st -d coverage -p 8080",
@@ -35,7 +33,7 @@
     "@perma/map": "^1.0.2",
     "actor": "^2.3.1",
     "multiformats": "^13.0.1",
-    "protobufjs": "^7.1.2",
+    "protons-runtime": "^5.6.0",
     "rabin-rs": "^2.1.0"
   },
   "type": "module",
@@ -122,16 +120,22 @@
   "devDependencies": {
     "@ipld/car": "^5.0.3",
     "@types/chai": "^4.3.3",
-    "@types/mocha": "^10.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.13.1",
     "@types/tsv": "^0.2.1",
+    "buffer": "^6.0.3",
     "c8": "^7.12.0",
     "chai": "^4.3.6",
+    "esbuild-plugins-node-modules-polyfill": "^1.6.8",
     "fzstd": "^0.0.4",
     "mocha": "^10.0.0",
     "nyc": "^15.1.0",
-    "playwright-test": "^8.1.1",
+    "playwright-test": "^14.1.9",
+    "protobufjs": "^7.5.3",
+    "protons": "^7.7.0",
     "tsv": "^0.2.0",
     "typescript": "^4.8.4"
   },
-  "license": "Apache-2.0 OR MIT"
+  "license": "Apache-2.0 OR MIT",
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

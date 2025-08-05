@@ -8,14 +8,14 @@ import type {
   Block as IPLDBlock,
   BlockView as IPLDBlockView
 } from "multiformats"
-import { Data, type IData } from "../gen/unixfs.js"
+import { Data } from "../gen/unixfs.js"
 export type { MultihashHasher, MultibaseEncoder, MultihashDigest, BlockEncoder }
 export * as Layout from "./file/layout/api"
 
 import NodeType = Data.DataType
 
 export { NodeType }
-export type { IData, LinkVersion }
+export { Data, LinkVersion }
 
 /**
  * Type representing any UnixFS node.
@@ -43,6 +43,8 @@ export interface SimpleFile {
   readonly type: NodeType.File
   readonly layout: "simple"
   readonly content: Uint8Array
+
+  filesize?: number
 }
 
 export interface Metadata {
@@ -307,14 +309,14 @@ export interface UnixTime {
    * (signed 64bit integer): represents the amount of seconds after or before
    * the epoch.
    */
-  readonly Seconds: int64
+  readonly seconds: bigint
 
   /**
    * (optional, 32bit unsigned integer ): when specified represents the
    * fractional part of the mtime as the amount of nanoseconds. The valid
    * range for this value are the integers [1, 999999999].
    */
-  readonly FractionalNanoseconds?: fixed32
+  readonly fractionalNanoseconds?: number
 }
 
 /**
@@ -347,7 +349,7 @@ export type Mode = uint32
  * 1970-01-01T00:00:00Z.
  */
 export interface MTime {
-  readonly secs: number
+  readonly secs: bigint
   readonly nsecs?: number
 }
 

@@ -1,0 +1,13 @@
+{
+  "name": "gen",
+  "version": "1.0.0",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^4.8.4"
+  },
+  "type": "module",
+  "exports": "./unixfs.js",
+  "scripts": {
+    "build": "tsc"
+  }
+}

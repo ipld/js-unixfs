@@ -1,6 +1,7 @@
 import * as UnixFS from "../src/lib.js"
 import { assert } from "chai"
 import { encodeUTF8, Link, collect, importFile } from "./util.js"
+import { describe, it } from "mocha"
 
 describe("UnixFS.createWriter", () => {
   it("UnixFS.createFileWriter", async () => {
