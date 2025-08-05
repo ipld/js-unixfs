@@ -17,7 +17,6 @@ export const name = "rabin"
  */
 
 /**
- *
  * @returns {Config}
  */
 export const defaults = () => configure({ avg: AVARAGE })
@@ -28,7 +27,6 @@ export const defaults = () => configure({ avg: AVARAGE })
  */
 
 /**
- *
  * @param {Partial<Config> & {avg: number}} config
  * @returns
  */
@@ -54,28 +52,7 @@ export const create = async (config = defaults()) => ({
     Math.floor(Math.log2(config.avg)),
     config.min,
     config.max,
-    config.window
-  ),
-  name,
-  cut,
-})
-
-/**
- * @param {BigInt} polynom
- * @param {Config} config
- * @returns {Promise<API.StatelessChunker<Context>>}
- */
-export const createWithPolynom = async (polynom, config = defaults()) => ({
-  type: "Stateless",
-  context: Object.assign(
-    await Rabin.createWithPolynom(
-      polynom,
-      Math.floor(Math.log2(config.avg)),
-      config.min,
-      config.max,
-      config.window
-    ),
-    config
+    config.window,
   ),
   name,
   cut,

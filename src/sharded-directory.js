@@ -1,16 +1,15 @@
-
 import * as PermaMap from "@perma/map"
 import * as UnixFSPermaMap from "@perma/map/unixfs"
 import * as PB from "@ipld/dag-pb"
 import { murmur364 } from "@multiformats/murmur3"
-import { Block } from 'multiformats/block'
+import { Block } from "multiformats/block"
 import * as API from "./directory/api.js"
 import * as File from "./file.js"
 import * as UnixFS from "./codec.js"
-import { set, remove } from "./directory.js"
+import { remove, set } from "./directory.js"
 
 export * from "./directory/api.js"
-export { set, remove } from "./directory.js"
+export { remove, set } from "./directory.js"
 
 export const configure = File.configure
 export const defaults = File.defaults
@@ -34,7 +33,7 @@ export const create = ({ writer, settings = defaults(), metadata = {} }) =>
  * @param {Writer} writer
  * @returns {Writer}
  */
-const asWritable = writer => {
+const asWritable = (writer) => {
   if (!writer.closed) {
     return writer
   } else {
@@ -103,12 +102,14 @@ const iterateBlocks = async function* (hamt, node, settings) {
   /** @type {UnixFS.DirectoryEntryLink[]} */
   const entries = []
   for (const ent of UnixFSPermaMap.iterate(node)) {
-    if ('key' in ent) {
-      entries.push(/** @type {UnixFS.DirectoryEntryLink} */ ({
-        name: `${ent.prefix ?? ''}${ent.key ?? ''}`,
-        dagByteLength: ent.value.dagByteLength,
-        cid: ent.value.cid,
-      }))
+    if ("key" in ent) {
+      entries.push(
+        /** @type {UnixFS.DirectoryEntryLink} */ ({
+          name: `${ent.prefix ?? ""}${ent.key ?? ""}`,
+          dagByteLength: ent.value.dagByteLength,
+          cid: ent.value.cid,
+        })
+      )
     } else {
       /** @type {UnixFS.BlockView<UnixFS.DirectoryShard>?} */
       let root = null
@@ -119,11 +120,16 @@ const iterateBlocks = async function* (hamt, node, settings) {
       /* c8 ignore next */
       if (root == null) throw new Error("no root block yielded")
 
-      entries.push(/** @type {UnixFS.ShardedDirectoryLink} */ ({
-        name: ent.prefix,
-        dagByteLength: UnixFS.cumulativeDagByteLength(root.bytes, root.value.entries),
-        cid: root.cid
-      }))
+      entries.push(
+        /** @type {UnixFS.ShardedDirectoryLink} */ ({
+          name: ent.prefix,
+          dagByteLength: UnixFS.cumulativeDagByteLength(
+            root.bytes,
+            root.value.entries,
+          ),
+          cid: root.cid
+        })
+      )
     }
   }
 
@@ -142,7 +148,7 @@ const iterateBlocks = async function* (hamt, node, settings) {
  * @param {API.EncoderSettings<Layout>} settings
  * @returns {Promise<UnixFS.BlockView<UnixFS.DirectoryShard>>}
  */
-async function encodeHAMTShardBlock (shard, settings) {
+async function encodeHAMTShardBlock(shard, settings) {
   const bytes = UnixFS.encodeHAMTShard(shard)
   const hash = await settings.hasher.digest(bytes)
   const cid = settings.linker.createLink(PB.code, hash)
@@ -162,7 +168,7 @@ export const fork = (
     writer = state.writer,
     metadata = state.metadata,
     settings = state.settings,
-  } = {}
+  } = {},
 ) =>
   new HAMTDirectoryWriter({
     writer,
@@ -289,8 +295,8 @@ class HashMap extends Map {
   }
 
   /**
-   * @param {string} key 
-   * @param {API.EntryLink} value 
+   * @param {string} key
+   * @param {API.EntryLink} value
    */
   set(key, value) {
     this.builder.set(key, value)

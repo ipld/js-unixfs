@@ -165,10 +165,6 @@ class DirectoryWriter {
     return this.state.settings
   }
 
-  links() {
-    return links(this)
-  }
-
   /**
    * @param {string} name
    * @param {UnixFS.FileLink | UnixFS.DirectoryLink} link

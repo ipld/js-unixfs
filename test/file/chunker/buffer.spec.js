@@ -1,5 +1,5 @@
 /* eslint-env mocha */
-import { expect, assert } from "chai"
+import { assert } from "chai"
 import * as BufferQueue from "../../../src/file/chunker/buffer.js"
 import { describe, it } from "mocha"
 

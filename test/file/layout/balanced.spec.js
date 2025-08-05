@@ -193,4 +193,19 @@ describe("balanced layout", () => {
       })
     }
   })
+  it("creates multiple internal nodes at same depth", () => {
+    let balanced = Balanced.open({ width: 2 })
+
+    const leaves = []
+    for (let i = 0; i < 5; i++) {
+      leaves.push(Slice.create([], i * 4, (i + 1) * 4))
+    }
+
+    const { layout } = Balanced.write(balanced, leaves)
+    const { root, nodes, leaves: finalLeaves } = Balanced.close(layout)
+
+    assert.isAtLeast(nodes.length, 2, "Should create multiple internal nodes")
+    assert.deepEqual(finalLeaves, [])
+    assert.deepEqual(root.children?.length, 2, "Root should have two children")
+  })
 })
