@@ -43,6 +43,8 @@ export interface SimpleFile {
   readonly type: NodeType.File
   readonly layout: "simple"
   readonly content: Uint8Array
+
+  filesize?: number
 }
 
 export interface Metadata {

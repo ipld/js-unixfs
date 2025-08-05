@@ -1,6 +1,6 @@
 import * as PB from "@ipld/dag-pb"
 import * as UnixFS from "./unixfs.js"
-import { NodeType, Data } from "./unixfs.js"
+import { Data, NodeType } from "./unixfs.js"
 
 export * from "./unixfs.js"
 
@@ -21,7 +21,6 @@ export const name = "UnixFS"
  */
 const encodePB = (data, links) => {
   Object(globalThis).debug && console.log({ data, links })
-
 
   return PB.encode(
     // We run through prepare as links need to be sorted by name which it will
@@ -48,8 +47,7 @@ export const createRaw = content => ({
  * @param {UnixFS.Metadata} [metadata]
  * @returns {UnixFS.SimpleFile}
  */
-export const createEmptyFile = metadata =>
-  createSimpleFile(EMPTY_BUFFER, metadata)
+export const createEmptyFile = metadata => createSimpleFile(EMPTY_BUFFER, metadata)
 
 /**
  * @param {Uint8Array} content
@@ -160,7 +158,6 @@ export const createDirectoryShard = (entries, bitfield, fanout, hashType) => ({
 })
 
 /**
- *
  * @param {Uint8Array} content
  * @returns {UnixFS.ByteView<UnixFS.Raw>}
  */
@@ -193,7 +190,7 @@ export const encodeFile = (node, ignoreMetadata = false) => {
       return encodeComplexFile(node.content, node.parts, metadata)
     default:
       throw new TypeError(
-        `File with unknown layout "${Object(node).layout}" was passed`
+        `File with unknown layout "${Object(node).layout}" was passed`,
       )
   }
 }
@@ -202,16 +199,15 @@ export const encodeFile = (node, ignoreMetadata = false) => {
  * @param {Uint8Array} content
  * @returns {UnixFS.ByteView<UnixFS.FileChunk>}
  */
-export const encodeFileChunk = content => encodeSimpleFile(content, BLANK)
+export const encodeFileChunk = (content) => encodeSimpleFile(content, BLANK)
 
 /**
  * @param {ReadonlyArray<UnixFS.FileLink>} parts
  * @returns {UnixFS.ByteView<UnixFS.FileShard>}
  */
-export const encodeFileShard = parts =>
+export const encodeFileShard = (parts) =>
   encodePB(
     {
-      
       Data: EMPTY_BUFFER,
       Type: NodeType.File,
       blocksizes: parts.map(contentByteLength),
@@ -220,7 +216,7 @@ export const encodeFileShard = parts =>
       fanout: 0n,
       mode: 0,
     },
-    parts.map(encodeLink)
+    parts.map(encodeLink),
   )
 
 /**
@@ -238,16 +234,15 @@ export const encodeAdvancedFile = (parts, metadata = BLANK) =>
       ...encodeMetadata(metadata),
       hashType: 0n,
       fanout: 0n,
-      
     },
-    parts.map(encodeLink)
+    parts.map(encodeLink),
   )
 
 /**
  * @param {UnixFS.DAGLink} dag
  * @returns {UnixFS.PBLink}
  */
-export const encodeLink = dag => ({
+export const encodeLink = (dag) => ({
   Name: "",
   Tsize: dag.dagByteLength,
   // @ts-ignore - @see https://github.com/multiformats/js-multiformats/pull/161
@@ -263,7 +258,6 @@ export const encodeLink = dag => ({
 export const encodeSimpleFile = (content, metadata = BLANK) =>
   encodePB(
     {
-      
       Type: NodeType.File,
       // adding empty file to both go-ipfs and js-ipfs produces block in
       // which `Data` is omitted but filesize and blocksizes are present.
@@ -275,11 +269,10 @@ export const encodeSimpleFile = (content, metadata = BLANK) =>
       hashType: 0n,
       fanout: 0n,
     },
-    []
+    [],
   )
 
 /**
- *
  * @param {Uint8Array} content
  * @param {ReadonlyArray<UnixFS.FileLink>} parts
  * @param {UnixFS.Metadata} [metadata]
@@ -296,27 +289,26 @@ export const encodeComplexFile = (content, parts, metadata = BLANK) =>
       fanout: 0n,
       mode: 0,
     },
-    parts.map(encodeLink)
+    parts.map(encodeLink),
   )
 
 /**
  * @param {UnixFS.FlatDirectory} node
  * @returns {UnixFS.ByteView<UnixFS.FlatDirectory>}
  */
-export const encodeDirectory = node =>
+export const encodeDirectory = (node) =>
   encodePB(
     {
-      
       Data: EMPTY_BUFFER,
       Type: node.type,
       blocksizes: [],
       ...encodeDirectoryMetadata(node.metadata || BLANK),
       hashType: 0n,
       fanout: 0n,
-      
+
       filesize: 0n,
     },
-    node.entries.map(encodeNamedLink)
+    node.entries.map(encodeNamedLink),
   )
 
 /**
@@ -332,28 +324,27 @@ export const encodeHAMTShard = ({
 }) =>
   encodePB(
     {
-      
       Type: NodeType.HAMTShard,
       Data: bitfield.byteLength > 0 ? bitfield : EMPTY_BUFFER,
       fanout: BigInt(readFanout(fanout)),
       hashType: BigInt(readInt(hashType)),
-      filesize: 0n,  
+      filesize: 0n,
       blocksizes: [],
       ...encodeDirectoryMetadata(metadata),
     },
-    entries.map(encodeNamedLink)
+    entries.map(encodeNamedLink),
   )
 
 /**
  * @param {number} n
  * @returns {number}
  */
-const readFanout = n => {
+const readFanout = (n) => {
   if (Math.log2(n) % 1 === 0) {
     return n
   } else {
     throw new TypeError(
-      `Expected hamt size to be a power of two instead got ${n}`
+      `Expected hamt size to be a power of two instead got ${n}`,
     )
   }
 }
@@ -363,7 +354,7 @@ const readFanout = n => {
  * @returns {number}
  */
 
-const readInt = n => {
+const readInt = (n) => {
   if (Number.isInteger(n)) {
     return n
   } else {
@@ -396,7 +387,6 @@ export const encodeSymlink = (node, ignoreMetadata = false) => {
   // @see https://github.com/ipfs/js-ipfs-unixfs/issues/195
   return encodePB(
     {
-      
       Type: NodeType.Symlink,
       Data: node.content,
       ...encodeMetadata(metadata || BLANK),
@@ -405,16 +395,15 @@ export const encodeSymlink = (node, ignoreMetadata = false) => {
       hashType: 0n,
       fanout: 0n,
     },
-    []
+    [],
   )
 }
 
 /**
  * @template {UnixFS.Node} T
  * @param {T} node
- * @param {boolean} root
  */
-export const encode = (node, root = true) => {
+export const encode = (node) => {
   switch (node.type) {
     case NodeType.Raw:
       return encodeRaw(node.content)
@@ -435,13 +424,13 @@ export const encode = (node, root = true) => {
  * @param {UnixFS.ByteView<UnixFS.Node>} bytes
  * @returns {UnixFS.Node}
  */
-export const decode = bytes => {
+export const decode = (bytes) => {
   const pb = PB.decode(bytes)
   // @ts-expect-error data cannot be undefined
   const message = Data.decode(pb.Data)
 
   const { Type: type, Data: data, mtime, mode, blocksizes, ...rest } = message
-  
+
   const metadata = {
     ...(mode && { mode }),
     ...decodeMtime(mtime),
@@ -458,13 +447,13 @@ export const decode = bytes => {
       } else if ((/** @type {Uint8Array} */ (data)).byteLength === 0) {
         return new AdvancedFileView(
           decodeFileLinks(/** @type {bigint[]} */ (blocksizes), links),
-          metadata
+          metadata,
         )
       } else {
         return new ComplexFileView(
           /** @type {Uint8Array} */ (data),
           decodeFileLinks(/** @type {bigint[]} */ (blocksizes), links),
-          metadata
+          metadata,
         )
       }
     case NodeType.Directory:
@@ -473,12 +462,12 @@ export const decode = bytes => {
       return createShardedDirectory(
         decodeDirectoryLinks(links),
         data || EMPTY_BUFFER,
-        Number( BigInt.asUintN(64, rest.fanout || 0n)),
-        Number( BigInt.asUintN(64, rest.hashType || 0n)),
-        metadata
+        Number(BigInt.asUintN(64, rest.fanout || 0n)),
+        Number(BigInt.asUintN(64, rest.hashType || 0n)),
+        metadata,
       )
     case NodeType.Symlink:
-      return createSymlink((/** @type {Uint8Array} */ (data)), metadata)
+      return createSymlink(/** @type {Uint8Array} */ (data), metadata)
     default:
       throw new TypeError(`Unsupported node type ${message.Type}`)
   }
@@ -488,16 +477,12 @@ export const decode = bytes => {
  * @param {UnixFS.UnixTime|undefined} mtime
  * @returns {{mtime?: UnixFS.MTime}|undefined}
  */
-const decodeMtime = mtime =>
-  mtime == null
-    ? undefined
-    : {
-        mtime: { secs: mtime.seconds, nsecs: mtime.fractionalNanoseconds },
-      }
-
+const decodeMtime = (mtime) =>
+  mtime == null ? undefined : {
+    mtime: { secs: mtime.seconds, nsecs: mtime.fractionalNanoseconds },
+  }
 
 /**
- *
  * @param {bigint[]} blocksizes
  * @param {UnixFS.PBLink[]} links
  * @returns {UnixFS.FileLink[]}
@@ -513,8 +498,9 @@ const decodeFileLinks = (blocksizes, links) => {
         cid: links[n].Hash,
         dagByteLength: links[n].Tsize || 0,
         contentByteLength: Number(BigInt.asUintN(64, blocksizes[n])),
-      })
+      }),
     )
+    n++
   }
   return parts
 }
@@ -523,22 +509,20 @@ const decodeFileLinks = (blocksizes, links) => {
  * @param {UnixFS.PBLink[]} links
  * @returns {UnixFS.DirectoryEntryLink[]}
  */
-const decodeDirectoryLinks = links =>
+const decodeDirectoryLinks = (links) =>
   links.map(
-    link =>
-      /** @type {UnixFS.DirectoryEntryLink} */ ({
-        cid: link.Hash,
-        name: link.Name || "",
-        dagByteLength: link.Tsize || 0,
-      })
+    (link) => /** @type {UnixFS.DirectoryEntryLink} */ ({
+      cid: link.Hash,
+      name: link.Name || "",
+      dagByteLength: link.Tsize || 0,
+    }),
   )
 
 /**
  * @param {ReadonlyArray<UnixFS.FileLink>} links
  * @returns {number}
  */
-export const cumulativeContentByteLength = links =>
-  links.reduce((size, link) => size + link.contentByteLength, 0)
+export const cumulativeContentByteLength = (links) => links.reduce((size, link) => size + link.contentByteLength, 0)
 
 /**
  * @param {Uint8Array} root
@@ -549,10 +533,9 @@ export const cumulativeDagByteLength = (root, links) =>
   links.reduce((size, link) => size + link.dagByteLength, root.byteLength)
 
 /**
- *
  * @param {UnixFS.FileLink} link
  */
-const contentByteLength = link => BigInt(link.contentByteLength)
+const contentByteLength = (link) => BigInt(link.contentByteLength)
 
 /**
  * @param {UnixFS.NamedDAGLink<unknown>} link
@@ -567,8 +550,7 @@ const encodeNamedLink = ({ name, dagByteLength, cid }) => ({
 /**
  * @param {UnixFS.Metadata} metadata
  */
-export const encodeDirectoryMetadata = metadata =>
-  encodeMetadata(metadata, DEFAULT_DIRECTORY_MODE)
+export const encodeDirectoryMetadata = (metadata) => encodeMetadata(metadata, DEFAULT_DIRECTORY_MODE)
 
 /**
  * @param {UnixFS.Metadata} metadata
@@ -576,7 +558,7 @@ export const encodeDirectoryMetadata = metadata =>
  */
 export const encodeMetadata = (
   { mode, mtime },
-  defaultMode = DEFAULT_FILE_MODE
+  defaultMode = DEFAULT_FILE_MODE,
 ) => ({
   mode: mode != null ? encodeMode(mode, defaultMode) : 0,
   mtime: mtime != null ? encodeMTime(mtime) : undefined,
@@ -585,20 +567,17 @@ export const encodeMetadata = (
 /**
  * @param {UnixFS.Metadata} [data]
  */
-export const decodeMetadata = data =>
-  data == null
-    ? BLANK
-    : {
-        ...(data.mode == null ? undefined : { mode: decodeMode(data.mode) }),
-        ...(data.mtime == null ? undefined : { mtime: data.mtime }),
-      }
+export const decodeMetadata = (data) =>
+  data == null ? BLANK : {
+    ...(data.mode == null ? undefined : { mode: decodeMode(data.mode) }),
+    ...(data.mtime == null ? undefined : { mtime: data.mtime }),
+  }
 
 /**
  * @param {UnixFS.MTime} mtime
  * @returns {import("../gen/unixfs.js").UnixTime | undefined}
  */
-const encodeMTime = mtime => {
-  
+const encodeMTime = (mtime) => {
   return mtime == null
     ? { seconds: 0n, fractionalNanoseconds: 0 }
     : mtime.nsecs
@@ -619,25 +598,7 @@ export const encodeMode = (specifiedMode, defaultMode) => {
  * @param {UnixFS.Mode} mode
  * @returns {UnixFS.Mode}
  */
-const decodeMode = mode => (mode & 0xfff) | (mode & 0xfffff000)
-
-/**
- * @param {{content?: Uint8Array, parts?: ReadonlyArray<UnixFS.FileLink>, metadata?: UnixFS.Metadata }} node
- * @returns {UnixFS.SimpleFile|UnixFS.AdvancedFile|UnixFS.ComplexFile}
- */
-export const matchFile = ({
-  content = EMPTY_BUFFER,
-  parts = EMPTY,
-  metadata = BLANK
-}) => {
-  if (parts.length === 0) {
-    return new SimpleFileView(content, metadata)
-  } else if (content.byteLength === 0) {
-    return new AdvancedFileView(parts, metadata)
-  } else {
-    return new ComplexFileView(content, parts, metadata)
-  }
-}
+const decodeMode = (mode) => (mode & 0xfff) | (mode & 0xfffff000)
 
 /**
  * @implements {UnixFS.SimpleFile}
@@ -744,10 +705,10 @@ class ComplexFileView {
 }
 
 /**
- * @param {UnixFS.File|UnixFS.Raw|UnixFS.FileChunk|UnixFS.FileShard|UnixFS.Symlink} node
+ * @param {UnixFS.Node} node
  * @returns {number}
  */
-export const filesize = node => {
+export const filesize = (node) => {
   switch (node.type) {
     case NodeType.Raw:
     case NodeType.Symlink:
