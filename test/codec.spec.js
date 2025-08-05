@@ -68,10 +68,19 @@ describe("unixfs-format", () => {
         layout: "complex",
         type: unixfs.NodeType.File,
         parts: [fileLink],
-        content: utf8.encode("Hello UnixFS\n"),
+        content,
       })
 
+      /**
+       * @type {any}
+       */
       const node = unixfs.decode(complexNode)
+
+      assert.deepEqual(
+        node.fileSize,
+        content.byteLength + fileLink.contentByteLength,
+      )
+      assert.deepEqual(node.blockSizes, [BigInt(fileLink.contentByteLength)])
 
       assert.deepEqual((/** @type {unixfs.ComplexFile} */ (node)).parts, [
         fileLink,
@@ -107,7 +116,13 @@ describe("unixfs-format", () => {
         parts: [fileLink],
       })
 
+      /**
+       * @type {any}
+       */
       const node = unixfs.decode(complexNode)
+
+      assert.deepEqual(node.fileSize, content.byteLength)
+      assert.deepEqual(node.blockSizes, [BigInt(fileLink.contentByteLength)])
 
       assert.deepEqual((/** @type {unixfs.AdvancedFile} */ (node)).parts, [
         fileLink,

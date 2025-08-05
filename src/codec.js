@@ -203,24 +203,6 @@ export const encodeFileChunk = (content) => encodeSimpleFile(content, BLANK)
 
 /**
  * @param {ReadonlyArray<UnixFS.FileLink>} parts
- * @returns {UnixFS.ByteView<UnixFS.FileShard>}
- */
-export const encodeFileShard = (parts) =>
-  encodePB(
-    {
-      Data: EMPTY_BUFFER,
-      Type: NodeType.File,
-      blocksizes: parts.map(contentByteLength),
-      filesize: BigInt(cumulativeContentByteLength(parts)),
-      hashType: 0n,
-      fanout: 0n,
-      mode: 0,
-    },
-    parts.map(encodeLink),
-  )
-
-/**
- * @param {ReadonlyArray<UnixFS.FileLink>} parts
  * @param {UnixFS.Metadata} [metadata]
  * @returns {UnixFS.ByteView<UnixFS.AdvancedFile>}
  */
@@ -626,10 +608,6 @@ class SimpleFileView {
   get filesize() {
     return this.content.byteLength
   }
-
-  encode() {
-    return encodeSimpleFile(this.content, this.metadata)
-  }
 }
 
 /**
@@ -660,10 +638,6 @@ class AdvancedFileView {
   }
   get blockSizes() {
     return this.parts.map(contentByteLength)
-  }
-
-  encode() {
-    return encodeAdvancedFile(this.parts, this.metadata)
   }
 }
 
@@ -697,10 +671,6 @@ class ComplexFileView {
   }
   get blockSizes() {
     return this.parts.map(contentByteLength)
-  }
-
-  encode() {
-    return encodeComplexFile(this.content, this.parts, this.metadata)
   }
 }
 
